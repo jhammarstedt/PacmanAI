@@ -14,7 +14,7 @@
 
 # imports from python standard library
 import grading
-import imp
+import importlib
 import optparse
 import os
 import re
@@ -81,8 +81,8 @@ def readCommand(argv):
 
 # confirm we should author solution files
 def confirmGenerate():
-    print 'WARNING: this action will overwrite any solution files.'
-    print 'Are you sure you want to proceed? (yes/no)'
+    print('WARNING: this action will overwrite any solution files.')
+    print('Are you sure you want to proceed? (yes/no)')
     while True:
         ans = sys.stdin.readline().strip()
         if ans == 'yes':
@@ -90,7 +90,7 @@ def confirmGenerate():
         elif ans == 'no':
             sys.exit(0)
         else:
-            print 'please answer either "yes" or "no"'
+            print('please answer either "yes" or "no"')
 
 
 # TODO: Fix this so that it tracebacks work correctly
@@ -110,19 +110,22 @@ def setModuleName(module, filename):
         elif type(o) == classType:
             setattr(o, '__file__', filename)
             # TODO: assign member __file__'s?
-        #print i, type(o)
+        #print (i, type(o))
 
 
 #from cStringIO import StringIO
+#from io import StringIO
 
 def loadModuleString(moduleSource):
     # Below broken, imp doesn't believe its being passed a file:
     #    ValueError: load_module arg#2 should be a file or None
     #
     #f = StringIO(moduleCodeDict[k])
-    #tmp = imp.load_module(k, f, k, (".py", "r", imp.PY_SOURCE))
-    tmp = imp.new_module(k)
-    exec moduleCodeDict[k] in tmp.__dict__
+    #tmp = importlib.load_module(k, f, k, (".py", "r", importlib.PY_SOURCE))
+    tmp = importlib.new_module(k)
+    # cshelton: guess at correct translation to Python 3
+    #exec moduleCodeDict[k] in tmp.__dict__
+    exec(moduleCodeDict[k],tmp.__dict__)
     setModuleName(tmp, k)
     return tmp
 
@@ -130,7 +133,7 @@ import py_compile
 
 def loadModuleFile(moduleName, filePath):
     with open(filePath, 'r') as f:
-        return imp.load_module(moduleName, f, "%s.py" % moduleName, (".py", "r", imp.PY_SOURCE))
+        return importlib.load_module(moduleName, f, "%s.py" % moduleName, (".py", "r", importlib.PY_SOURCE))
 
 
 def readFile(path, root=""):
@@ -183,12 +186,12 @@ def splitStrings(d):
 
 def printTest(testDict, solutionDict):
     pp = pprint.PrettyPrinter(indent=4)
-    print "Test case:"
+    print("Test case:")
     for line in testDict["__raw_lines__"]:
-        print "   |", line
-    print "Solution:"
+        print("   |", line)
+    print("Solution:")
     for line in solutionDict["__raw_lines__"]:
-        print "   |", line
+        print("   |", line)
 
 
 def runTest(testName, moduleDict, printTestCase=False, display=None):
@@ -232,7 +235,7 @@ def getTestSubdirs(testParser, testRoot, questionToGrade):
     if questionToGrade != None:
         questions = getDepends(testParser, testRoot, questionToGrade)
         if len(questions) > 1:
-            print 'Note: due to dependencies, the following tests will be run: %s' % ' '.join(questions)
+            print('Note: due to dependencies, the following tests will be run: %s' % ' '.join(questions))
         return questions
     if 'order' in problemDict:
         return problemDict['order'].split()

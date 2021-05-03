@@ -58,7 +58,7 @@ GHOST_SHAPE = [
 GHOST_SIZE = 0.65
 SCARED_COLOR = formatColor(1,1,1)
 
-GHOST_VEC_COLORS = map(colorToVector, GHOST_COLORS)
+GHOST_VEC_COLORS = list(map(colorToVector, GHOST_COLORS))
 
 PACMAN_COLOR = formatColor(255.0/255.0,255.0/255.0,61.0/255)
 PACMAN_SCALE = 0.5
@@ -332,7 +332,7 @@ class PacmanGraphics:
 
   def animatePacman(self, pacman, prevPacman, image):
     if self.frameTime < 0:
-      print 'Press any key to step forward, "q" to play'
+      print('Press any key to step forward, "q" to play')
       keys = wait_for_keys()
       if 'q' in keys:
         self.frameTime = 0.1

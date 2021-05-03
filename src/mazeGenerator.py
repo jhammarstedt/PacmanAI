@@ -135,7 +135,7 @@ def make_with_prison(room, depth, gaps=1, vert=True, min_width=1, gapfactor=0.5)
 
 
   add_r, add_c = room.anchor
-  print p
+  print(p)
   for j in range(p):
     cur_col = 2*(j+1)-1
     for row in range(room.r):
@@ -209,7 +209,7 @@ def add_pacman_stuff(maze, max_food=60, max_capsules=4, toskip=0):
     depth += 1
     num_added = 0
     for row in range(1, maze.r-1):
-      for col in range(1+toskip, (maze.c/2)-1):
+      for col in range(1+toskip, int(maze.c/2)-1):
         if (row > maze.r-6) and (col < 6): continue
         if maze.grid[row][col] != E: continue
         neighbors = (maze.grid[row-1][col]==E) + (maze.grid[row][col-1]==E) + (maze.grid[row+1][col]==E) + (maze.grid[row][col+1]==E)
@@ -268,4 +268,4 @@ if __name__ == '__main__':
   seed = None
   if len(sys.argv) > 1:
     seed = int(sys.argv[1])
-  print generateMaze(seed)
+  print(generateMaze(seed))
