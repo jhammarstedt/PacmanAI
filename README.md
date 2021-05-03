@@ -13,3 +13,6 @@ We will train an RL agent to play capture-the-flag pacman inspired by the compet
 This is a task for the class [DD2438](https://www.kth.se/student/kurser/kurs/DD2438?l=en), expected to be done before June.
 
 ![](http://ai.berkeley.edu/projects/release/contest/v1/002/capture_the_flag.png)
+
+## Game enviroment 
+Credits to cshelton for rewriting the enviroment to support python 3, you can find the repository [here](https://github.com/cshelton/pacman-ctf)
