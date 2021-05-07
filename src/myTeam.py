@@ -17,6 +17,8 @@ import random, time, util
 from game import Directions
 import game
 
+from DQNAgent import DQN_agent
+
 #################
 # Team creation #
 #################
@@ -37,7 +39,8 @@ def createTeam(firstIndex, secondIndex, isRed,
   any extra arguments, so you should make sure that the default
   behavior is what you want for the nightly contest.
   """
-
+  #return [eval(DQN_agent),eval(DQN_agent))]  # maybe like this
+  
   # The following line is an example only; feel free to change it.
   return [eval(first)(firstIndex), eval(second)(secondIndex)]
 
