@@ -1,4 +1,5 @@
-<img src="https://media.giphy.com/media/jxJjBMvqEvMSA/giphy.gif" height = 100 width = 100 align ="right" />
+
+<img src="http://ai.berkeley.edu/images/pacman_game.gif" width=350 height = 200 align ="right" />
 
 # PacmanAI (WIP)
 
