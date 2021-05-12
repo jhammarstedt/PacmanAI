@@ -61,6 +61,10 @@ from game import reconstituteGrid
 import sys, util, types, time, random, importlib
 import keyboardAgents
 import importlib.util
+
+import DQNAgent
+
+
 # If you change these, you won't affect the server, so you can't cheat
 KILL_POINTS = 0
 SONAR_NOISE_RANGE = 13 # Must be odd

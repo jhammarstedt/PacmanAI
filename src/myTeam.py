@@ -169,7 +169,9 @@ class DQN_agent(CaptureAgent):
     self.start = gameState.getAgentPosition(self.index)
     print("start ",self.start)
     state = self.getStateMatrices(gameState)
+    state = self.mergeStateMatrices(state)
     print(state)
+
     '''
     Your initialization code goes here, if you need any.
     '''
@@ -286,11 +288,29 @@ class DQN_agent(CaptureAgent):
     observation = np.zeros((6, height, width))
 
     observation[0] = getWallMatrix(state)
-    observation[1] = getPacmanMatrix(state)
-    observation[2] = getGhostMatrix(state)
-    observation[3] = getScaredGhostMatrix(state)
-    observation[4] = getFoodMatrix(state)
-    observation[5] = getCapsulesMatrix(state)
+    observation[1] = getPacmanMatrix(state) #do our and their
+    observation[2] = getGhostMatrix(state) # our and their
+    observation[3] = getScaredGhostMatrix(state) #our and their
+    observation[4] = getFoodMatrix(state) # our and their
+    observation[5] = getCapsulesMatrix(state) # our and their
+
+
+
+    """
+    We need 
+    Opponent ghosts
+    Our ghosts
+      
+    -- Getourplayer
+    -- GetTheirplayer
+    -- GetOurFood
+    -- GetTheirFood
+    
+    -- maybe: Get Our and their ScaredGhost, Capsule 
+    
+    """
+
+
 
     observation = np.swapaxes(observation, 0, 2)
 
