@@ -202,6 +202,8 @@ class DQN_agent(CaptureAgent):
 
     """ Return wall, ghosts, food, capsules matrices """
 
+
+
     def getWallMatrix(state):
       """ Return matrix with wall coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
@@ -233,7 +235,7 @@ class DQN_agent(CaptureAgent):
       width, height = state.data.layout.width, state.data.layout.height
       matrix = np.zeros((height, width), dtype=np.int8)
       enemies = self.getOpponents(state)
-
+      
       for agent in enemies:
         # TODO use probabilities if the
         pos = state.getAgentPosition(agent)
@@ -251,24 +253,22 @@ class DQN_agent(CaptureAgent):
 
       return matrix
 
-    def getScaredGhostMatrix(state):
-      """ Return matrix with ghost coordinates set to 1 """
+    def GetOurFoodMatrix(state):
       width, height = state.data.layout.width, state.data.layout.height
-      matrix = np.zeros((height, width), dtype=np.int8)
+      grid = self.getFoodYouAreDefending(state)
+      matrix = np.zeros((height,width), dtype = np.int8)
 
-      for agentState in state.data.agentStates:
-        if not agentState.isPacman:
-          if agentState.scaredTimer > 0:
-            pos = agentState.configuration.getPosition()
-            cell = 1
-            matrix[-1 - int(pos[1])][int(pos[0])] = cell
+      for i in range(grid.height):
+        for j in range(grid.width):
+          # Put cell vertically reversed in matrix
+          cell = 1 if grid[j][i] else 0
+          matrix[-1 - i][j] = cell
 
       return matrix
 
-    def getFoodMatrix(state):
-      """ Return matrix with food coordinates set to 1 """
+    def GetTheirFoodMatrix(state):
       width, height = state.data.layout.width, state.data.layout.height
-      grid = state.data.food
+      grid = self.getFood(state)
       matrix = np.zeros((height, width), dtype=np.int8)
 
       for i in range(grid.height):
@@ -279,10 +279,22 @@ class DQN_agent(CaptureAgent):
 
       return matrix
 
-    def getCapsulesMatrix(state):
+    def GetOurCapsulesMatrix(state):
       """ Return matrix with capsule coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
-      capsules = state.data.layout.capsules
+      capsules = self.getCapsulesYouAreDefending()
+      matrix = np.zeros((height, width), dtype=np.int8)
+
+      for i in capsules:
+        # Insert capsule cells vertically reversed into matrix
+        matrix[-1 - i[1], i[0]] = 1
+
+      return matrix
+
+    def GetTheirCapsulesMatrix(state):
+      """ Return matrix with capsule coordinates set to 1 """
+      width, height = state.data.layout.width, state.data.layout.height
+      capsules = self.getCapsules()
       matrix = np.zeros((height, width), dtype=np.int8)
 
       for i in capsules:
@@ -295,16 +307,15 @@ class DQN_agent(CaptureAgent):
     # wall, pacman, ghost, food and capsule matrices
     # width, height = state.data.layout.width, state.data.layout.height
     width, height = self.params['width'], self.params['height']
-    observation = np.zeros((6, height, width))
+    observation = np.zeros((7, height, width))
 
     observation[0] = getWallMatrix(state)
     observation[1] = getFriendPacmanMatrix(state) #our
     observation[2] = getEnemyPacmanMatrix(state) #their
-    observation[3] = getScaredGhostMatrix(state) #our and their
-    observation[4] = getFoodMatrix(state) # our and their
-    observation[5] = getCapsulesMatrix(state) # our and their
-
-
+    observation[3] = GetOurFoodMatrix(state)
+    observation[4] = GetTheirFoodMatrix(state)
+    observation[5] = GetOurCapsulesMatrix(state)
+    observation[6] = GetTheirCapsulesMatrix(state)
 
     """
     We need 
@@ -316,7 +327,7 @@ class DQN_agent(CaptureAgent):
     -- GetOurFood
     -- GetTheirFood
     
-    -- maybe: Get Our and their ScaredGhost, Capsule 
+    -- maybe: Get Our and their ScaredGhost,Ghost, Capsule 
     
     """
 
