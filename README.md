@@ -19,6 +19,7 @@ This is a task for the class [DD2438](https://www.kth.se/student/kurser/kurs/DD2
 Credits to cshelton for rewriting the enviroment to support python 3, you can find the repository [here](https://github.com/cshelton/pacman-ctf)
 
 ## Useful resources:
+ * [CFT Pacman](https://github.com/jaredjxyz/Pacman-Tournament-Agent)
  * [starcraft RL](https://soygema.github.io/starcraftII_machine_learning/#0)
  * RL in pytorch: [Mario](https://pytorch.org/tutorials/intermediate/mario_rl_tutorial.html), [Flappy Bird](https://www.toptal.com/deep-learning/pytorch-reinforcement-learning-tutorial)
  * [Keras RL](https://github.com/keras-rl/keras-rl)
