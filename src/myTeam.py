@@ -216,18 +216,40 @@ class DQN_agent(CaptureAgent):
           matrix[-1 - i][j] = cell
       return matrix
 
+    def getFriendPacmanMatrix(state):
+      """ Return matrix with pacman coordinates set to 1 """
+      width, height = state.data.layout.width, state.data.layout.height
+      matrix = np.zeros((height, width), dtype=np.int8)
+      team = self.getTeam(state)
 
-    def getScaredGhostMatrix(state):
+      for agent in team:
+        pos = state.getAgentPosition(agent)
+        # TODO distinguish between pacman and ghost
+        cell = 1
+        matrix[-1 - int(pos[1])][int(pos[0])] = cell
+
+      return matrix
+
+    def getEnemyPacmanMatrix(state):
       """ Return matrix with ghost coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
       matrix = np.zeros((height, width), dtype=np.int8)
+      enemies = self.getOpponents(state)
+      
+      for agent in enemies:
+        # TODO use probabilities if the
+        pos = state.getAgentPosition(agent)
+        if pos is not None:
+          cell = 1
+          matrix[-1 - int(pos[1])][int(pos[0])] = cell
 
-      for agentState in state.data.agentStates:
-        if not agentState.isPacman:
-          if agentState.scaredTimer > 0:
-            pos = agentState.configuration.getPosition()
-            cell = 1
-            matrix[-1 - int(pos[1])][int(pos[0])] = cell
+      # OLD CODE
+      #for agentState in state.data.agentStates:
+       # if not agentState.isPacman:
+       #   if not agentState.scaredTimer > 0:
+       #     pos = agentState.configuration.getPosition()
+       #     cell = 1
+       #     matrix[-1 - int(pos[1])][int(pos[0])] = cell
 
       return matrix
 
@@ -287,9 +309,9 @@ class DQN_agent(CaptureAgent):
     width, height = self.params['width'], self.params['height']
     observation = np.zeros((7, height, width))
 
-
     observation[0] = getWallMatrix(state)
-
+    observation[1] = getFriendPacmanMatrix(state) #our
+    observation[2] = getEnemyPacmanMatrix(state) #their
     observation[3] = GetOurFoodMatrix(state)
     observation[4] = GetTheirFoodMatrix(state)
     observation[5] = GetOurCapsulesMatrix(state)
