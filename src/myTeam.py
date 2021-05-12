@@ -214,30 +214,40 @@ class DQN_agent(CaptureAgent):
           matrix[-1 - i][j] = cell
       return matrix
 
-    def getPacmanMatrix(state):
+    def getFriendPacmanMatrix(state):
       """ Return matrix with pacman coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
       matrix = np.zeros((height, width), dtype=np.int8)
+      team = self.getTeam(state)
 
-      for agentState in state.data.agentStates:
-        if agentState.isPacman:
-          pos = agentState.configuration.getPosition()
-          cell = 1
-          matrix[-1 - int(pos[1])][int(pos[0])] = cell
+      for agent in team:
+        pos = state.getAgentPosition(agent)
+        # TODO distinguish between pacman and ghost
+        cell = 1
+        matrix[-1 - int(pos[1])][int(pos[0])] = cell
 
       return matrix
 
-    def getGhostMatrix(state):
+    def getEnemyPacmanMatrix(state):
       """ Return matrix with ghost coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
       matrix = np.zeros((height, width), dtype=np.int8)
+      enemies = self.getOpponents(state)
 
-      for agentState in state.data.agentStates:
-        if not agentState.isPacman:
-          if not agentState.scaredTimer > 0:
-            pos = agentState.configuration.getPosition()
-            cell = 1
-            matrix[-1 - int(pos[1])][int(pos[0])] = cell
+      for agent in enemies:
+        # TODO use probabilities if the
+        pos = state.getAgentPosition(agent)
+        if pos is not None:
+          cell = 1
+          matrix[-1 - int(pos[1])][int(pos[0])] = cell
+
+      # OLD CODE
+      #for agentState in state.data.agentStates:
+       # if not agentState.isPacman:
+       #   if not agentState.scaredTimer > 0:
+       #     pos = agentState.configuration.getPosition()
+       #     cell = 1
+       #     matrix[-1 - int(pos[1])][int(pos[0])] = cell
 
       return matrix
 
@@ -288,8 +298,8 @@ class DQN_agent(CaptureAgent):
     observation = np.zeros((6, height, width))
 
     observation[0] = getWallMatrix(state)
-    observation[1] = getPacmanMatrix(state) #do our and their
-    observation[2] = getGhostMatrix(state) # our and their
+    observation[1] = getFriendPacmanMatrix(state) #our
+    observation[2] = getEnemyPacmanMatrix(state) #their
     observation[3] = getScaredGhostMatrix(state) #our and their
     observation[4] = getFoodMatrix(state) # our and their
     observation[5] = getCapsulesMatrix(state) # our and their
