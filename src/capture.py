@@ -58,11 +58,11 @@ from game import Grid
 from game import Configuration
 from game import Agent
 from game import reconstituteGrid
+from myTeam import *
 import sys, util, types, time, random, importlib
 import keyboardAgents
 import importlib.util
 
-import DQNAgent
 
 
 # If you change these, you won't affect the server, so you can't cheat
@@ -769,7 +769,7 @@ def readCommand( argv ):
   parser = OptionParser(usageStr)
 
   parser.add_option('-r', '--red', help=default('Red team'),
-                    default='baselineTeam')
+                    default='myTeam')
   parser.add_option('-b', '--blue', help=default('Blue team'),
                     default='baselineTeam')
   parser.add_option('--red-name', help=default('Red team name'),

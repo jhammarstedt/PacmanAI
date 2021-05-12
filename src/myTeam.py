@@ -17,11 +17,19 @@ import random, time, util
 from game import Directions
 import game
 import numpy as np
+import sys
+
+#Replay memory
+from collections import deque
+
+# Neural nets
+import tensorflow as tf
+from DQN import *
 
 params = {
       # Model backups
       'load_file': None,
-      'save_file': None,
+      'save_file': "testSave",
       'save_interval': 10000,
 
       # Training parameters
@@ -37,7 +45,9 @@ params = {
       # Epsilon value (epsilon-greedy)
       'eps': 1.0,  # Epsilon start value
       'eps_final': 0.1,  # Epsilon end value
-      'eps_step': 10000  # Epsilon steps between start and end (linear)
+      'eps_step': 10000,  # Epsilon steps between start and end (linear)
+
+
     }
 
 #################
@@ -45,7 +55,7 @@ params = {
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DQN_agent', second = 'DummyAgent'):
+               first = 'DQN_agent', second = 'DQN_agent', **kwargs):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -63,7 +73,7 @@ def createTeam(firstIndex, secondIndex, isRed,
   #return [eval(DQN_agent),eval(DQN_agent))]  # maybe like this
   print(f"FIRST TEAM {first}")
   # The following line is an example only; feel free to change it.
-  return [eval(first)(firstIndex), eval(second)(secondIndex)]
+  return [eval(first)(firstIndex, **kwargs), eval(second)(secondIndex, **kwargs)]
 
 ##########
 # Agents #
@@ -75,6 +85,8 @@ class DummyAgent(CaptureAgent):
   You should look at baselineTeam.py for more details about how to
   create an agent as this is the bare minimum.
   """
+  def __init__(self, index, *args, **kwargs):
+    CaptureAgent.__init__(self, index)
 
   def registerInitialState(self, gameState):
     """
@@ -121,22 +133,17 @@ class DummyAgent(CaptureAgent):
 
 class DQN_agent(CaptureAgent):
 
-  # def __init__(self, args):
-  #    super().__init__()
-  #
-  #   print("Initialise DQN Agent")
-  #
-  #   # Load parameters from user-given arguments
-  #   #
-  #   # self.params['width'] = args['width']
-  #   # self.params['height'] = args['height']
-  #   # self.params['num_training'] = args['numTraining']
+
 
   """
-  A Dummy agent to serve as an example of the necessary agent structure.
-  You should look at baselineTeam.py for more details about how to
-  create an agent as this is the bare minimum.
+  DQN agent
   """
+  def __init__(self,index, *args, **kwargs):
+    CaptureAgent.__init__(self, index)
+    print("Initialise DQN Agent")
+    # Load parameters from user-given arguments
+    self.params = params
+    self.params['num_training'] = kwargs.pop('numTraining', 0)
 
   def registerInitialState(self, gameState):
     """
@@ -158,44 +165,271 @@ class DQN_agent(CaptureAgent):
     CaptureAgent.registerInitialState in captureAgents.py.
     '''
 
-    self.params = params
+    CaptureAgent.registerInitialState(self, gameState)
 
+    '''
+     Your initialization code goes here, if you need any.
+     '''
+
+    ### TODO Add DQN initialization into _init_ function
+
+    print("Initialise DQN Agent")
+
+    # Load parameters from user-given arguments
     self.params['width'] = gameState.data.layout.width
     self.params['height'] = gameState.data.layout.height
 
+    # Start Tensorflow session
+    # TODO Add GPU
+    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
+    #self.sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
+    self.qnet = DQN(self.params)
+
+    # time started
+    self.general_record_time = time.strftime("%a_%d_%b_%Y_%H_%M_%S", time.localtime())
+    # Q and cost
+    self.Q_global = []
+    self.cost_disp = 0
+
+    # Stats
+    self.cnt = self.qnet.sess.run(self.qnet.global_step)
+    self.local_cnt = 0
+
+    self.numeps = 0
+    self.last_score = 0
+    self.s = time.time()
+    self.last_reward = 0.
+    self.last_food_difference = 0
+
+    self.replay_mem = deque()
+    self.last_scores = deque()
+    self.last_food_difference = deque()
+
+    ### End of DQN initialization ###
+
+    #self.start = gameState.getAgentPosition(self.index)
+    #print("start ",self.start)
+    #state = self.getStateMatrices(gameState)
+    #state = self.mergeStateMatrices(state)
+    #print(state)
+
+    # Reset reward
+    self.last_score = 0
+    self.current_score = 0
+    self.last_reward = 0.
+    self.ep_rew = 0
+    self.last_food_difference = 0
+
+    # Reset state
+    self.last_state = None
+    self.current_state = self.getStateMatrices(gameState)
+
+    # Reset actions
+    self.last_action = None
+
+    # Reset vars
+    self.terminal = None
+    self.won = True
+    self.Q_global = []
+    self.delay = 0
+
+    # Next
+    self.frame = 0
+    self.numeps += 1
+
+  def get_direction(self, value):
+      if value == 0.:
+        return Directions.NORTH
+      elif value == 1.:
+        return Directions.EAST
+      elif value == 2.:
+        return Directions.SOUTH
+      else:
+        return Directions.WEST
+
+  def get_value(self, direction):
+    if direction == Directions.NORTH:
+      return 0.
+    elif direction == Directions.EAST:
+      return 1.
+    elif direction == Directions.SOUTH:
+      return 2.
+    else:
+      return 3.
+
+  def getMove(self, gameState):
+    # Exploit / Explore
+    if np.random.rand() > self.params['eps']:
+      # Exploit action
+      self.Q_pred = self.qnet.sess.run(
+        self.qnet.y,
+        feed_dict = {self.qnet.x: np.reshape(self.current_state,
+                                             (1, self.params['width'], self.params['height'], 7)),
+                     self.qnet.q_t: np.zeros(1),
+                     self.qnet.actions: np.zeros((1, 4)),
+                     self.qnet.terminals: np.zeros(1),
+                     self.qnet.rewards: np.zeros(1)})[0]
+
+      self.Q_global.append(max(self.Q_pred))
+      a_winner = np.argwhere(self.Q_pred == np.amax(self.Q_pred))
+
+      if len(a_winner) > 1:
+        move = self.get_direction(
+          a_winner[np.random.randint(0, len(a_winner))][0])
+      else:
+        move = self.get_direction(
+          a_winner[0][0])
+    else:
+      # Random:
+      move = self.get_direction(np.random.randint(0, 4))
+
+    # Save last_action
+    self.last_action = self.get_value(move)
+
+    return move
+
+  def observation_step(self, gameState):
+    if self.last_action is not None:
+      # Process current experience state
+      self.last_state = np.copy(self.current_state)
+      self.current_state = self.getStateMatrices(gameState)
+
+      # Process current experience reward
+      # TODO CHAANGE REWRDS
+      # -1 for loosing time -> nothing happens
+      # +1 eat food -> store increases
+      # +5 eat Pill -> scares ghosts
+      # -100 get eaten by ghost / pacman -> in starting positon and nothing changes
+      # +10 positive score / drop
+      # +50 eat ghost / eat pacman
 
 
-    CaptureAgent.registerInitialState(self, gameState)
-    self.start = gameState.getAgentPosition(self.index)
-    print("start ",self.start)
-    state = self.getStateMatrices(gameState)
-    state = self.mergeStateMatrices(state)
-    print(state)
 
-    '''
-    Your initialization code goes here, if you need any.
-    '''
+      self.current_score = gameState.getScore()
+      reward = self.current_score - self.last_score
+      # if (gameState.isOnRedTeam(self.index)): Differenc of food is relevant
+
+
+
+      self.last_score = self.current_score
+
+      # todo, blue team has negative reward
+      if reward > 10:
+        self.last_reward = 50.    # Dropped more than 10 candy in own field
+      elif reward > 0:
+        self.last_reward = 10.    # Dropped less than 20 candy in own field
+      elif reward < -10:
+        self.last_reward = -500.  # Get eaten   (Ouch!) -500
+        self.won = False
+      elif reward <= 0:
+        self.last_reward = -1.    # Punish time (Pff..)
+
+
+      if(self.terminal and self.won):
+        self.last_reward = 100.
+      self.ep_rew += self.last_reward
+
+      # Store last experience into memory
+      experience = (self.last_state, float(self.last_reward), self.last_action, self.current_state, self.terminal)
+      self.replay_mem.append(experience)
+      if len(self.replay_mem) > self.params['mem_size']:
+        self.replay_mem.popleft()
+
+      # Save model
+      if(params['save_file']):
+        if self.local_cnt > self.params['train_start'] and self.local_cnt % self.params['save_interval'] == 0:
+          self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
+          print('Model saved')
+
+      # Train
+      self.train()
+
+    # Next
+    self.local_cnt += 1
+    self.frame += 1
+    self.params['eps'] = max(self.params['eps_final'],
+                             1.00 - float(self.cnt)/ float(self.params['eps_step']))
+
+
+  def observationFunction(self, state):
+    # Do observation
+    self.terminal = False
+    self.observation_step(state)
+
+    return state
+
+  def final(self, gameState):
+    # Next
+    self.ep_rew += self.last_reward
+
+    # Do observation
+    self.terminal = True
+    self.observation_step(gameState)
+
+    # Print stats
+    # Todo: Enable printout
+    # log_file = open('./logs/'+str(self.general_record_time)+'-l-'+str(self.params['width'])+'-m-'+str(self.params['height'])+'-x-'+str(self.params['num_training'])+'.log','a')
+    # log_file.write("# %4d | steps: %5d | steps_t: %5d | t: %4f | r: %12f | e: %10f " %
+    #                (self.numeps,self.local_cnt, self.cnt, time.time()-self.s, self.ep_rew, self.params['eps']))
+    # log_file.write("| Q: %10f | won: %r \n" % ((max(self.Q_global, default=float('nan')), self.won)))
+    # sys.stdout.write("# %4d | steps: %5d | steps_t: %5d | t: %4f | r: %12f | e: %10f " %
+    #                  (self.numeps,self.local_cnt, self.cnt, time.time()-self.s, self.ep_rew, self.params['eps']))
+    # sys.stdout.write("| Q: %10f | won: %r \n" % ((max(self.Q_global, default=float('nan')), self.won)))
+    # sys.stdout.flush()
+
+  def train(self):
+    # Train
+    if (self.local_cnt > self.params['train_start']):
+      batch = random.sample(self.replay_mem, self.params['batch_size'])
+      batch_s = [] # States (s)
+      batch_r = [] # Rewards (r)
+      batch_a = [] # Actions (a)
+      batch_n = [] # Next states (s')
+      batch_t = [] # Terminal state (t)
+
+      for i in batch:
+        batch_s.append(i[0])
+        batch_r.append(i[1])
+        batch_a.append(i[2])
+        batch_n.append(i[3])
+        batch_t.append(i[4])
+      batch_s = np.array(batch_s)
+      batch_r = np.array(batch_r)
+      batch_a = self.get_onehot(np.array(batch_a))
+      batch_n = np.array(batch_n)
+      batch_t = np.array(batch_t)
+
+      self.cnt, self.cost_disp = self.qnet.train(batch_s, batch_a, batch_t, batch_n, batch_r)
+
+
+  def get_onehot(self, actions):
+    """ Create list of vectors with 1 values at index of action in list """
+    actions_onehot = np.zeros((self.params['batch_size'], 4))
+    for i in range(len(actions)):
+      actions_onehot[i][int(actions[i])] = 1
+    return actions_onehot
 
   def chooseAction(self, gameState):
-    """
-    This will be our main method from where we get the action!
-    """
-    actions = gameState.getLegalActions(self.index)
+      """
+      This will be our main method from where we get the action!
+      """
+      move = self.getMove(gameState)
 
-    '''
-    You should change this in your own agent.
-    '''
+      # Stop moving when not legal
+      legal = gameState.getLegalActions(self.index)
+      if move not in legal:
+        move = Directions.STOP
 
-    return random.choice(actions)
+      return move
 
   """CODE FROM PAPER TO GET STATE SPACE"""
 
   def mergeStateMatrices(self, stateMatrices):
     """ Merge state matrices to one state tensor """
     stateMatrices = np.swapaxes(stateMatrices, 0, 2)
-    total = np.zeros((7, 7))
+    total = np.zeros((8, 8))
     for i in range(len(stateMatrices)):
-      total += (i + 1) * stateMatrices[i] / 6
+      total += (i + 1) * stateMatrices[i] / 7
     return total
 
   def getStateMatrices(self, state):
@@ -282,7 +516,7 @@ class DQN_agent(CaptureAgent):
     def GetOurCapsulesMatrix(state):
       """ Return matrix with capsule coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
-      capsules = self.getCapsulesYouAreDefending()
+      capsules = self.getCapsulesYouAreDefending(state)
       matrix = np.zeros((height, width), dtype=np.int8)
 
       for i in capsules:
@@ -294,7 +528,7 @@ class DQN_agent(CaptureAgent):
     def GetTheirCapsulesMatrix(state):
       """ Return matrix with capsule coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
-      capsules = self.getCapsules()
+      capsules = self.getCapsules(state)
       matrix = np.zeros((height, width), dtype=np.int8)
 
       for i in capsules:
