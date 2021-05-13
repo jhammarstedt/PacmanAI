@@ -145,39 +145,11 @@ class DQN_agent(CaptureAgent):
     self.params = params
     self.params['num_training'] = kwargs.pop('numTraining', 0)
 
-  def registerInitialState(self, gameState):
-    """
-    This method handles the initial setup of the
-    agent to populate useful fields (such as what team
-    we're on).
-
-    A distanceCalculator instance caches the maze distances
-    between each pair of positions, so your agents can use:
-    self.distancer.getDistance(p1, p2)
-
-    IMPORTANT: This method may run for at most 15 seconds.
-    """
-
-    '''
-    Make sure you do not delete the following line. If you would like to
-    use Manhattan distances instead of maze distances in order to save
-    on initialization time, please take a look at
-    CaptureAgent.registerInitialState in captureAgents.py.
-    '''
-
-    CaptureAgent.registerInitialState(self, gameState)
-
-    '''
-     Your initialization code goes here, if you need any.
-     '''
-
-    ### TODO Add DQN initialization into _init_ function
-
     print("Initialise DQN Agent")
 
     # Load parameters from user-given arguments
-    self.params['width'] = gameState.data.layout.width
-    self.params['height'] = gameState.data.layout.height
+    self.params['width'] = 32 # TODO gameState.data.layout.width
+    self.params['height'] = 16 # TODO gameState.data.layout.height
 
     # Start Tensorflow session
     # TODO Add GPU
@@ -205,7 +177,32 @@ class DQN_agent(CaptureAgent):
     self.last_scores = deque()
     self.last_food_difference = deque()
 
-    ### End of DQN initialization ###
+  def registerInitialState(self, gameState):
+    """
+    This method handles the initial setup of the
+    agent to populate useful fields (such as what team
+    we're on).
+
+    A distanceCalculator instance caches the maze distances
+    between each pair of positions, so your agents can use:
+    self.distancer.getDistance(p1, p2)
+
+    IMPORTANT: This method may run for at most 15 seconds.
+    """
+
+    '''
+    Make sure you do not delete the following line. If you would like to
+    use Manhattan distances instead of maze distances in order to save
+    on initialization time, please take a look at
+    CaptureAgent.registerInitialState in captureAgents.py.
+    '''
+
+    CaptureAgent.registerInitialState(self, gameState)
+
+    '''
+     Your initialization code goes here, if you need any.
+     '''
+
 
     #self.start = gameState.getAgentPosition(self.index)
     #print("start ",self.start)
