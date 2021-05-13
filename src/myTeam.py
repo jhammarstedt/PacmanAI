@@ -298,6 +298,7 @@ class DQN_agent(CaptureAgent):
       # -100 get eaten by ghost / pacman -> in starting positon and nothing changes
       # +10 positive score / drop
       # +50 eat ghost / eat pacman
+      # -2 our food gets eaten
 
 
 
