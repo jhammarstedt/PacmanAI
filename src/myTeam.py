@@ -18,12 +18,13 @@ from game import Directions
 import game
 import numpy as np
 import sys
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 #Replay memory
 from collections import deque
 
 # Neural nets
-import tensorflow as tf
 from DQN import *
 
 params = {
@@ -75,56 +76,6 @@ def createTeam(firstIndex, secondIndex, isRed,
   # The following line is an example only; feel free to change it.
   return [eval(first)(firstIndex, **kwargs), eval(second)(secondIndex, **kwargs)]
 
-##########
-# Agents #
-##########
-
-class DummyAgent(CaptureAgent):
-  """
-  A Dummy agent to serve as an example of the necessary agent structure.
-  You should look at baselineTeam.py for more details about how to
-  create an agent as this is the bare minimum.
-  """
-  def __init__(self, index, *args, **kwargs):
-    CaptureAgent.__init__(self, index)
-
-  def registerInitialState(self, gameState):
-    """
-    This method handles the initial setup of the
-    agent to populate useful fields (such as what team
-    we're on).
-
-    A distanceCalculator instance caches the maze distances
-    between each pair of positions, so your agents can use:
-    self.distancer.getDistance(p1, p2)
-
-    IMPORTANT: This method may run for at most 15 seconds.
-    """
-
-    '''
-    Make sure you do not delete the following line. If you would like to
-    use Manhattan distances instead of maze distances in order to save
-    on initialization time, please take a look at
-    CaptureAgent.registerInitialState in captureAgents.py.
-    '''
-    CaptureAgent.registerInitialState(self, gameState)
-
-    '''
-    Your initialization code goes here, if you need any.
-    '''
-
-
-  def chooseAction(self, gameState):
-    """
-    Picks among actions randomly.
-    """
-    actions = gameState.getLegalActions(self.index)
-
-    '''
-    You should change this in your own agent.
-    '''
-
-    return random.choice(actions)
 
 
 ##########
@@ -215,6 +166,9 @@ class DQN_agent(CaptureAgent):
     self.last_reward = 0.
     self.ep_rew = 0
     self.last_food_difference = 0
+
+    # flag for first state
+    self.first_state = True
 
     # Reset state
     self.last_state = None
@@ -307,19 +261,25 @@ class DQN_agent(CaptureAgent):
       # if (gameState.isOnRedTeam(self.index)): Differenc of food is relevant
 
 
-
       self.last_score = self.current_score
+      if self.first_state:
+        self.first_state = False
+        if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
+          reward -=20 #we were killed and spawned back to start
 
-      # todo, blue team has negative reward
-      if reward > 10:
-        self.last_reward = 50.    # Dropped more than 10 candy in own field
-      elif reward > 0:
-        self.last_reward = 10.    # Dropped less than 20 candy in own field
-      elif reward < -10:
-        self.last_reward = -10.  # Get eaten   (Ouch!) -500
-        self.won = False
-      elif reward <= 0:
-        self.last_reward = -1.    # Punish time (Pff..)
+
+
+
+      # # todo, blue team has negative reward
+      # if reward > 10:
+      #   self.last_reward = 50.    # Dropped more than 10 candy in own field
+      # elif reward > 0:
+      #   self.last_reward = 10.    # Dropped less than 20 candy in own field
+      # elif reward < -10:
+      #   self.last_reward = -10.  # Get eaten   (Ouch!) -500
+      #   self.won = False
+      # elif reward <= 0:
+      #   self.last_reward = -1.    # Punish time (Pff..)
 
 
       if(self.terminal and self.won):
@@ -570,3 +530,53 @@ class DQN_agent(CaptureAgent):
 
 
 
+##########
+# Agents #
+##########
+
+class DummyAgent(CaptureAgent):
+  """
+  A Dummy agent to serve as an example of the necessary agent structure.
+  You should look at baselineTeam.py for more details about how to
+  create an agent as this is the bare minimum.
+  """
+  def __init__(self, index, *args, **kwargs):
+    CaptureAgent.__init__(self, index)
+
+  def registerInitialState(self, gameState):
+    """
+    This method handles the initial setup of the
+    agent to populate useful fields (such as what team
+    we're on).
+
+    A distanceCalculator instance caches the maze distances
+    between each pair of positions, so your agents can use:
+    self.distancer.getDistance(p1, p2)
+
+    IMPORTANT: This method may run for at most 15 seconds.
+    """
+
+    '''
+    Make sure you do not delete the following line. If you would like to
+    use Manhattan distances instead of maze distances in order to save
+    on initialization time, please take a look at
+    CaptureAgent.registerInitialState in captureAgents.py.
+    '''
+    CaptureAgent.registerInitialState(self, gameState)
+
+    '''
+    Your initialization code goes here, if you need any.
+    '''
+
+
+  def chooseAction(self, gameState):
+    """
+    Picks among actions randomly.
+    """
+    actions = gameState.getLegalActions(self.index)
+
+    '''
+    You should change this in your own agent.
+    '''
+
+    return random.choice(actions)
