@@ -28,7 +28,7 @@ Credits to cshelton for rewriting the enviroment to support python 3, you can fi
 
 ## Run
 Use the following command to run the code
-'''$ python capture.py -n 6000 -x 5000 '''
-* -n is number of episodes
-* -x is number of trainings
-* -l smallGrid (Optional)
+```$ python capture.py -n 6000 -x 5000 ```
+* `-n` is number of episodes
+* `-x` is number of trainings
+* `-l` smallGrid (Optional)
