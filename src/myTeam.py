@@ -30,11 +30,11 @@ params = {
       # Model backups
       'load_file': None,
       'save_file': "save_model",
-      'save_interval': 150, # original 100000
+      'save_interval': 10000, # original 100000
 
       # Training parameters
-      'train_start': 10,  # Episodes before training starts | orgiginal 5000
-      'batch_size': 10,  # Replay memory batch size | original 32
+      'train_start': 100,  # Episodes before training starts | orgiginal 5000
+      'batch_size': 32,  # Replay memory batch size | original 32
       'mem_size': 100000,  # Replay memory size
 
       'discount': 0.95,  # Discount rate (gamma value)
@@ -140,7 +140,6 @@ class DQN_agent(CaptureAgent):
   """
   def __init__(self,index, *args, **kwargs):
     CaptureAgent.__init__(self, index)
-    print("Initialise DQN Agent")
     # Load parameters from user-given arguments
     self.params = params
     self.params['num_training'] = kwargs.pop('numTraining', 0)
