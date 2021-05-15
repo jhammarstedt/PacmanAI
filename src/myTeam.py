@@ -29,17 +29,17 @@ from DQN import *
 
 params = {
       # Model backups
-      'load_file': None,
+      'load_file': "saves/model-save_model_21325_125",
       'save_file': "save_model",
-      'save_interval': 10000, # original 100000
+      'save_interval': 5000, # original 100000
 
       # Training parameters
-      'train_start': 100,  # Episodes before training starts | orgiginal 5000
+      'train_start': 50,  # Episodes before training starts | orgiginal 5000
       'batch_size': 32,  # Replay memory batch size | original 32
       'mem_size': 100000,  # Replay memory size
 
       'discount': 0.95,  # Discount rate (gamma value)
-      'lr': .0002,  # Learning reate
+      'lr': .002,  # Learning reate
       # 'rms_decay': 0.99,      # RMS Prop decay (switched to adam)
       # 'rms_eps': 1e-6,        # RMS Prop epsilon (switched to adam)
 
@@ -83,8 +83,6 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 
 class DQN_agent(CaptureAgent):
-
-
 
   """
   DQN agent
@@ -179,9 +177,14 @@ class DQN_agent(CaptureAgent):
 
     # Reset vars
     self.terminal = None
-    self.won = True
+    self.won = False
     self.Q_global = []
     self.delay = 0
+
+    #reset food status
+    self.ourFood = self.CountOurFood(gameState)
+    self.theirFood=self.CountTheirFood(gameState)
+
 
     # Next
     self.frame = 0
@@ -238,52 +241,80 @@ class DQN_agent(CaptureAgent):
 
     return move
 
+
+  def CountOurFood(self,gameState):
+    foodgrid = CaptureAgent.getFood(self,gameState)
+    count = foodgrid.count()
+    return count
+
+  def CountTheirFood(self, gameState):
+    foodgrid = CaptureAgent.getFoodYouAreDefending(self, gameState)
+    count = foodgrid.count()
+    return count
+
+  def updateLastReward(self,gameState):
+    # Process current experience reward
+    # TODO CHAANGE REWRDS
+    # -1 for loosing time -> nothing happens
+    # +1 eat food -> store increases
+    # +5 eat Pill -> scares ghosts
+    # -100 get eaten by ghost / pacman -> in starting positon and nothing changes
+    # +10 positive score / drop
+    # +50 eat ghost / eat pacman
+    # -2 our food gets eaten
+
+    self.current_score = CaptureAgent.getScore(self,gameState)
+    reward = self.current_score - self.last_score
+
+    #self.ourFood = self.ourFood - self.CountOurFood(gameState)
+    #self.theirFood = self.theirFood - self.CountTheirFood(gameState)
+
+    #reward = reward + self.ourFood - self.theirFood #adding the more food we have over them
+
+    self.last_score = self.current_score
+
+    if self.first_state: #since we will start in the starting position duh
+      self.first_state = False
+      #if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
+      #  reward -= 20  # we were killed and spawned back to start
+
+
+
+    # # todo, blue team has negative reward
+    # if reward > 10:
+    #   self.last_reward = 50.    # Dropped more than 10 candy in own field
+    # elif reward > 0:
+    #   self.last_reward = 10.    # Dropped less than 20 candy in own field
+    # elif reward < -10:
+    #   self.last_reward = -10.  # Get eaten   (Ouch!) -500
+    #   self.won = False
+    # elif reward <= 0:
+    #   self.last_reward = -1.    # Punish time (Pff..)
+
+    if (gameState.isOver()):
+      if CaptureAgent.getScore(self,gameState) > 0:
+        self.won = True
+      if (self.terminal and self.won):
+        self.last_reward = 500. #win is great
+    else:
+      if reward > 10:
+        self.last_reward = 50
+      elif reward > 0:
+        self.last_reward = 10.    # Dropped less than 20 candy in own field
+      elif reward < -10:
+        self.last_reward = -200.  # Get eaten   (Ouch!) -500
+      elif reward == 0:
+        self.last_reward = -1
+
+
+
   def observation_step(self, gameState):
     if self.last_action is not None:
       # Process current experience state
       self.last_state = np.copy(self.current_state)
       self.current_state = self.getStateMatrices(gameState)
 
-      # Process current experience reward
-      # TODO CHAANGE REWRDS
-      # -1 for loosing time -> nothing happens
-      # +1 eat food -> store increases
-      # +5 eat Pill -> scares ghosts
-      # -100 get eaten by ghost / pacman -> in starting positon and nothing changes
-      # +10 positive score / drop
-      # +50 eat ghost / eat pacman
-      # -2 our food gets eaten
-
-
-
-      self.current_score = gameState.getScore()
-      reward = self.current_score - self.last_score
-      # if (gameState.isOnRedTeam(self.index)): Differenc of food is relevant
-
-
-      self.last_score = self.current_score
-      if self.first_state:
-        self.first_state = False
-        if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
-          reward -=20 #we were killed and spawned back to start
-
-
-
-
-      # # todo, blue team has negative reward
-      # if reward > 10:
-      #   self.last_reward = 50.    # Dropped more than 10 candy in own field
-      # elif reward > 0:
-      #   self.last_reward = 10.    # Dropped less than 20 candy in own field
-      # elif reward < -10:
-      #   self.last_reward = -10.  # Get eaten   (Ouch!) -500
-      #   self.won = False
-      # elif reward <= 0:
-      #   self.last_reward = -1.    # Punish time (Pff..)
-
-
-      if(self.terminal and self.won):
-        self.last_reward = 100.
+      self.updateLastReward(gameState) #update reward
       self.ep_rew += self.last_reward
 
       # Store last experience into memory
