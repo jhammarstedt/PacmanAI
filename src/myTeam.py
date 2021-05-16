@@ -24,7 +24,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 GPU = True
 COLAB_SAVE = True
-
+load_model = True
 
 #Replay memory
 from collections import deque
@@ -32,9 +32,17 @@ from collections import deque
 # Neural nets
 from DQN import *
 from game import Actions
+
+if COLAB_SAVE:
+  load = 'saves/model-latest'
+elif load_model:
+  load = "saves/model-save_model_112649_227"
+else:
+  load = None
+
 params = {
       # Model backups
-      'load_file': None,# "saves/model-save_model_112649_227",
+      'load_file': load,
       'save_file': "save_model",
       'save_interval': 100000, # original 100000
 
