@@ -26,15 +26,15 @@ from collections import deque
 
 # Neural nets
 from DQN import *
-
+from game import Actions
 params = {
       # Model backups
-      'load_file': "saves/model-save_model_21325_125",
+      'load_file': None, #"saves/model-save_model_145386_125",
       'save_file': "save_model",
-      'save_interval': 5000, # original 100000
+      'save_interval': 10000, # original 100000
 
       # Training parameters
-      'train_start': 50,  # Episodes before training starts | orgiginal 5000
+      'train_start': 5000,  # Episodes before training starts | orgiginal 5000
       'batch_size': 32,  # Replay memory batch size | original 32
       'mem_size': 100000,  # Replay memory size
 
@@ -125,6 +125,9 @@ class DQN_agent(CaptureAgent):
     self.last_scores = deque()
     self.last_food_difference = deque()
 
+
+
+
   def registerInitialState(self, gameState):
     """
     This method handles the initial setup of the
@@ -184,6 +187,13 @@ class DQN_agent(CaptureAgent):
     #reset food status
     self.ourFood = self.CountOurFood(gameState)
     self.theirFood=self.CountTheirFood(gameState)
+
+    #first Astar actions
+    self.atCenter = False #first walk to center before we start DQN
+
+    # ASTAR Path to center
+    self.ASTARPATH = deque(self.aStarSearch(gameState.getAgentPosition(self.index),gameState,[(12,8)])) #hard code for now
+
 
 
     # Next
@@ -273,38 +283,28 @@ class DQN_agent(CaptureAgent):
 
     self.last_score = self.current_score
 
-    if self.first_state: #since we will start in the starting position duh
-      self.first_state = False
-      #if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
-      #  reward -= 20  # we were killed and spawned back to start
-
-
-
-    # # todo, blue team has negative reward
-    # if reward > 10:
-    #   self.last_reward = 50.    # Dropped more than 10 candy in own field
-    # elif reward > 0:
-    #   self.last_reward = 10.    # Dropped less than 20 candy in own field
-    # elif reward < -10:
-    #   self.last_reward = -10.  # Get eaten   (Ouch!) -500
-    #   self.won = False
-    # elif reward <= 0:
-    #   self.last_reward = -1.    # Punish time (Pff..)
-
     if (gameState.isOver()):
-      if CaptureAgent.getScore(self,gameState) > 0:
+      if CaptureAgent.getScore(self, gameState) > 0:
         self.won = True
       if (self.terminal and self.won):
-        self.last_reward = 500. #win is great
+        return 10000. #win is great
     else:
+      if self.first_state:  # since we will start in the starting position duh
+        self.first_state = False
+      else:
+        if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
+          return -100  # we were eaten and spawned back to start
+
       if reward > 10:
-        self.last_reward = 50
+        return 50
       elif reward > 0:
-        self.last_reward = 10.    # Dropped less than 20 candy in own field
+        return 10.    # Dropped less than 20 candy in own field
       elif reward < -10:
-        self.last_reward = -200.  # Get eaten   (Ouch!) -500
-      elif reward == 0:
-        self.last_reward = -1
+        return -10.
+      elif reward < 0: # need to get back to the lead
+        return -5
+      else:
+        return -1 #punish time
 
 
 
@@ -314,7 +314,7 @@ class DQN_agent(CaptureAgent):
       self.last_state = np.copy(self.current_state)
       self.current_state = self.getStateMatrices(gameState)
 
-      self.updateLastReward(gameState) #update reward
+      self.last_reward = self.updateLastReward(gameState) #update reward
       self.ep_rew += self.last_reward
 
       # Store last experience into memory
@@ -401,7 +401,15 @@ class DQN_agent(CaptureAgent):
       """
       This will be our main method from where we get the action!
       """
-      move = self.getMove(gameState)
+      if len(self.ASTARPATH) == 0:  # check if we have moved to centerspot
+        self.atCenter = True
+
+
+      if self.atCenter:
+        move = self.getMove(gameState)
+      else:
+        move = self.ASTARPATH.popleft()
+
 
       # Stop moving when not legal
       legal = gameState.getLegalActions(self.index)
@@ -559,55 +567,51 @@ class DQN_agent(CaptureAgent):
 
     return observation
 
-
-
-##########
-# Agents #
-##########
-
-class DummyAgent(CaptureAgent):
-  """
-  A Dummy agent to serve as an example of the necessary agent structure.
-  You should look at baselineTeam.py for more details about how to
-  create an agent as this is the bare minimum.
-  """
-  def __init__(self, index, *args, **kwargs):
-    CaptureAgent.__init__(self, index)
-
-  def registerInitialState(self, gameState):
+  def aStarSearch(self, startPosition, gameState, goalPositions, avoidPositions=[], returnPosition=False):
     """
-    This method handles the initial setup of the
-    agent to populate useful fields (such as what team
-    we're on).
-
-    A distanceCalculator instance caches the maze distances
-    between each pair of positions, so your agents can use:
-    self.distancer.getDistance(p1, p2)
-
-    IMPORTANT: This method may run for at most 15 seconds.
+    Finds the distance between the agent with the given index and its nearest goalPosition
     """
+    walls = gameState.getWalls()
+    width = walls.width
+    height = walls.height
+    walls = walls.asList()
 
-    '''
-    Make sure you do not delete the following line. If you would like to
-    use Manhattan distances instead of maze distances in order to save
-    on initialization time, please take a look at
-    CaptureAgent.registerInitialState in captureAgents.py.
-    '''
-    CaptureAgent.registerInitialState(self, gameState)
+    actions = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+    actionVectors = [Actions.directionToVector(action) for action in actions]
+    # Change action vectors to integers so they work correctly with indexing
+    actionVectors = [tuple(int(number) for number in vector) for vector in actionVectors]
 
-    '''
-    Your initialization code goes here, if you need any.
-    '''
+    # Values are stored a 3-tuples, (Position, Path, TotalCost)
+
+    currentPosition, currentPath, currentTotal = startPosition, [], 0
+    # Priority queue uses the maze distance between the entered point and its closest goal position to decide which comes first
+    queue = util.PriorityQueueWithFunction(
+      lambda entry: entry[2] + width * height if entry[0] in avoidPositions else 0 + min(
+        util.manhattanDistance(entry[0],endPosition) for endPosition in goalPositions))
+
+    # Keeps track of visited positions
+    visited = {currentPosition}
+
+    while currentPosition not in goalPositions:
+
+      possiblePositions = [((currentPosition[0] + vector[0], currentPosition[1] + vector[1]), action) for
+                           vector, action in zip(actionVectors, actions)]
+      legalPositions = [(position, action) for position, action in possiblePositions if position not in walls]
+
+      for position, action in legalPositions:
+        if position not in visited:
+          visited.add(position)
+          queue.push((position, currentPath + [action], currentTotal + 1))
+
+      # This shouldn't ever happen...But just in case...
+      if len(queue.heap) == 0:
+        return None
+      else:
+        currentPosition, currentPath, currentTotal = queue.pop()
+
+    if returnPosition:
+      return currentPath, currentPosition
+    else:
+      return currentPath
 
 
-  def chooseAction(self, gameState):
-    """
-    Picks among actions randomly.
-    """
-    actions = gameState.getLegalActions(self.index)
-
-    '''
-    You should change this in your own agent.
-    '''
-
-    return random.choice(actions)
