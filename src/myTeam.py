@@ -276,12 +276,17 @@ class DQN_agent(CaptureAgent):
     # -2 our food gets eaten
 
     self.current_score = CaptureAgent.getScore(self,gameState)
+
     reward = self.current_score - self.last_score
 
-    #self.ourFood = self.ourFood - self.CountOurFood(gameState)
-    #self.theirFood = self.theirFood - self.CountTheirFood(gameState)
+    ourFoodDiff = self.ourFood - self.CountOurFood(gameState)
+    theirFoodDiff = self.theirFood - self.CountTheirFood(gameState)
 
-    #reward = reward + self.ourFood - self.theirFood #adding the more food we have over them
+    self.ourFood = self.CountOurFood(gameState)
+    self.theirFood = self.CountTheirFood(gameState)
+
+
+    reward = reward + ourFoodDiff - theirFoodDiff #adding the more food we have over them
 
     self.last_score = self.current_score
 
