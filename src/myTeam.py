@@ -15,12 +15,13 @@
 from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
+import tensorflow as tf
 import game
 import numpy as np
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
+GPU = True
 #Replay memory
 from collections import deque
 
@@ -29,9 +30,9 @@ from DQN import *
 from game import Actions
 params = {
       # Model backups
-      'load_file': None, #"saves/model-save_model_145386_125",
+      'load_file': "saves/model-save_model_38043_209",
       'save_file': "save_model",
-      'save_interval': 10000, # original 100000
+      'save_interval': 100000, # original 100000
 
       # Training parameters
       'train_start': 5000,  # Episodes before training starts | orgiginal 5000
@@ -39,14 +40,14 @@ params = {
       'mem_size': 100000,  # Replay memory size
 
       'discount': 0.95,  # Discount rate (gamma value)
-      'lr': .002,  # Learning reate
+      'lr': .0002,  # Learning reate
       # 'rms_decay': 0.99,      # RMS Prop decay (switched to adam)
       # 'rms_eps': 1e-6,        # RMS Prop epsilon (switched to adam)
 
       # Epsilon value (epsilon-greedy)
       'eps': 1.0,  # Epsilon start value
       'eps_final': 0.1,  # Epsilon end value
-      'eps_step': 10000,  # Epsilon steps between start and end (linear)
+      'eps_step': 50000,  # Epsilon steps between start and end (linear)
 
 
     }
@@ -101,8 +102,9 @@ class DQN_agent(CaptureAgent):
 
     # Start Tensorflow session
     # TODO Add GPU
-    #gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
-    #self.sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
+    if GPU:
+      gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.1)
+      self.sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
     self.qnet = DQN(self.params)
 
     # time started
@@ -287,7 +289,9 @@ class DQN_agent(CaptureAgent):
       if CaptureAgent.getScore(self, gameState) > 0:
         self.won = True
       if (self.terminal and self.won):
-        return 10000. #win is great
+        return 10000. # win is great
+      else:
+        return -100 # we lost
     else:
       if self.first_state:  # since we will start in the starting position duh
         self.first_state = False
