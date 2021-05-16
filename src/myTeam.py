@@ -287,7 +287,9 @@ class DQN_agent(CaptureAgent):
       if CaptureAgent.getScore(self, gameState) > 0:
         self.won = True
       if (self.terminal and self.won):
-        return 10000. #win is great
+        return 10000. # win is great
+      else:
+        return -100 # we lost
     else:
       if self.first_state:  # since we will start in the starting position duh
         self.first_state = False
