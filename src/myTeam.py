@@ -23,7 +23,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 GPU = True
-COLAB_SAVE = True
+COLAB_SAVE = False
 load_model = True
 
 #Replay memory
@@ -33,10 +33,12 @@ from collections import deque
 from DQN import *
 from game import Actions
 
-if COLAB_SAVE:
-  load = 'saves/model-latest'
-elif load_model:
-  load = "saves/model-save_model_112649_227"
+if load_model:
+  with open("saves/checkpoint") as f:
+    data = f.readline()
+    f.close()
+  load = data[24:-2] #quick fix to read the model from checkpoint
+
 else:
   load = None
 
@@ -44,7 +46,7 @@ params = {
       # Model backups
       'load_file': load,
       'save_file': "save_model",
-      'save_interval': 100000, # original 100000
+      'save_interval': 55000, # original 100000
 
       # Training parameters
       'train_start': 5000,  # Episodes before training starts | orgiginal 5000
@@ -241,7 +243,7 @@ class DQN_agent(CaptureAgent):
       self.Q_pred = self.qnet.sess.run(
         self.qnet.y,
         feed_dict = {self.qnet.x: np.reshape(self.current_state,
-                                             (1, self.params['width'], self.params['height'], 7)),
+                                             (1, self.params['width'], self.params['height'], 8)),
                      self.qnet.q_t: np.zeros(1),
                      self.qnet.actions: np.zeros((1, 4)),
                      self.qnet.terminals: np.zeros(1),
@@ -347,10 +349,7 @@ class DQN_agent(CaptureAgent):
       # Save model
       if(params['save_file']):
         if self.local_cnt > self.params['train_start'] and self.local_cnt % self.params['save_interval'] == 0:
-          if COLAB_SAVE: #to enable colab to run and not RAM crash
-            self.qnet.save_ckpt('saves/model-latest')
-          else:
-            self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
+          self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
 
           print('Model saved')
 
