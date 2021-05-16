@@ -21,7 +21,11 @@ import numpy as np
 import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 GPU = True
+COLAB_SAVE = True
+
+
 #Replay memory
 from collections import deque
 
@@ -30,7 +34,7 @@ from DQN import *
 from game import Actions
 params = {
       # Model backups
-      'load_file': "saves/model-save_model_38043_209",
+      'load_file': None,# "saves/model-save_model_112649_227",
       'save_file': "save_model",
       'save_interval': 100000, # original 100000
 
@@ -47,7 +51,7 @@ params = {
       # Epsilon value (epsilon-greedy)
       'eps': 1.0,  # Epsilon start value
       'eps_final': 0.1,  # Epsilon end value
-      'eps_step': 50000,  # Epsilon steps between start and end (linear)
+      'eps_step': 100000,  # Epsilon steps between start and end (linear)
 
 
     }
@@ -335,7 +339,11 @@ class DQN_agent(CaptureAgent):
       # Save model
       if(params['save_file']):
         if self.local_cnt > self.params['train_start'] and self.local_cnt % self.params['save_interval'] == 0:
-          self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
+          if COLAB_SAVE: #to enable colab to run and not RAM crash
+            self.qnet.save_ckpt('saves/model-latest')
+          else:
+            self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
+
           print('Model saved')
 
       # Train
@@ -455,17 +463,31 @@ class DQN_agent(CaptureAgent):
           matrix[-1 - i][j] = cell
       return matrix
 
+    def getplayerPos(state):
+      """ Return matrix with the player coordinates set to 1 """
+      width, height = state.data.layout.width, state.data.layout.height
+      matrix = np.zeros((height, width), dtype=np.int8)
+
+      pos = state.getAgentPosition(self.index)
+      # TODO distinguish between pacman and ghost
+      cell = 1
+      matrix[-1 - int(pos[1])][int(pos[0])] = cell
+
+      return matrix
+
     def getFriendPacmanMatrix(state):
-      """ Return matrix with pacman coordinates set to 1 """
+      """ Return matrix with our teammate coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
       matrix = np.zeros((height, width), dtype=np.int8)
       team = self.getTeam(state)
 
+
       for agent in team:
-        pos = state.getAgentPosition(agent)
-        # TODO distinguish between pacman and ghost
-        cell = 1
-        matrix[-1 - int(pos[1])][int(pos[0])] = cell
+          if agent != self.index:
+            pos = state.getAgentPosition(agent)
+            # TODO distinguish between pacman and ghost
+            cell = 1
+            matrix[-1 - int(pos[1])][int(pos[0])] = cell
 
       return matrix
 
@@ -546,15 +568,16 @@ class DQN_agent(CaptureAgent):
     # wall, pacman, ghost, food and capsule matrices
     # width, height = state.data.layout.width, state.data.layout.height
     width, height = self.params['width'], self.params['height']
-    observation = np.zeros((7, height, width))
+    observation = np.zeros((8, height, width))
 
     observation[0] = getWallMatrix(state)
     observation[1] = getFriendPacmanMatrix(state) #our
-    observation[2] = getEnemyPacmanMatrix(state) #their
-    observation[3] = GetOurFoodMatrix(state)
-    observation[4] = GetTheirFoodMatrix(state)
-    observation[5] = GetOurCapsulesMatrix(state)
-    observation[6] = GetTheirCapsulesMatrix(state)
+    observation[2] = getplayerPos(state)
+    observation[3] = getEnemyPacmanMatrix(state) #their
+    observation[4] = GetOurFoodMatrix(state)
+    observation[5] = GetTheirFoodMatrix(state)
+    observation[6] = GetOurCapsulesMatrix(state)
+    observation[7] = GetTheirCapsulesMatrix(state)
 
     """
     We need 
