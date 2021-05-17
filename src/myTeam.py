@@ -363,8 +363,8 @@ class DQN_agent(CaptureAgent):
       reward = -1 # Nothing happens, punish time
 
 
-    if (gameState.isOver()):
-      if CaptureAgent.getScore(self, gameState) > 0:
+    if (currentGameState.isOver()):
+      if CaptureAgent.getScore(self, currentGameState) > 0:
         self.won = True
       if (self.terminal and self.won):
         return 10000. # win is great
@@ -374,7 +374,7 @@ class DQN_agent(CaptureAgent):
       if self.first_state:  # since we will start in the starting position duh
         self.first_state = False
       else:
-        if gameState.getAgentPosition(self.index) == gameState.getInitialAgentPosition(self.index):
+        if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
           self.atCenter=False
           return -100  # we were eaten and spawned back to start
 
