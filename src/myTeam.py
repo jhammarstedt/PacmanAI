@@ -90,7 +90,7 @@ def createTeam(firstIndex, secondIndex, isRed,
   """
   #return [eval(DQN_agent),eval(DQN_agent))]  # maybe like this
   print(f"PLayer 1: {first}")
-  print(f"Player 2: {first}")
+  print(f"Player 2: {second}")
   # The following line is an example only; feel free to change it.
   return [eval(first)(firstIndex), eval(second)(secondIndex, **kwargs)]
 
@@ -699,7 +699,7 @@ class DQN_agent(CaptureAgent):
     def predictEnemyMatrix(state):
       self.last_food = GetFoodMatrix(state, 'Attacking')
       #Check difference from previous
-      # if enemy_isempty on our side 
+      # if enemy_isempty on our side
 
       pass
 
