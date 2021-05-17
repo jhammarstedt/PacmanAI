@@ -47,7 +47,7 @@ params = {
       'save_interval': 55000, # original 100000
 
       # Training parameters
-      'TRAIN':False,
+      'TRAIN':True,
       'train_start': 5000,  # Episodes before training starts | orgiginal 5000
       'batch_size': 32,  # Replay memory batch size | original 32
       'mem_size': 100000,  # Replay memory size
@@ -110,8 +110,12 @@ class DQN_agent(CaptureAgent):
     # Load parameters from user-given arguments
     self.params = params
     self.params['num_training'] = kwargs.pop('numTraining', 0)
+    if self.index ==0:
+      print(f"Initialise red DQN Agent {self.index} NO train")
+      self.params['TRAIN'] = False
+    else:
+      print(f"Initialise orange DQN Agent {self.index} train")
 
-    print("Initialise DQN Agent")
 
     # Load parameters from user-given arguments
     self.params['width'] = 32 # TODO gameState.data.layout.width
@@ -692,6 +696,12 @@ class DQN_agent(CaptureAgent):
 
       return matrix
 
+    def predictEnemyMatrix(state):
+      self.last_food = GetFoodMatrix(state, 'Attacking')
+      #Check difference from previous
+      # if enemy_isempty on our side 
+
+      pass
 
     # Create observation matrix as a combination of
     # wall, pacman, ghost, food and capsule matrices
@@ -721,6 +731,9 @@ class DQN_agent(CaptureAgent):
     observation[11] = GetFoodMatrix(state,'Attacking')
     observation[12] = GetCapsulesMatrix(state,'Defending')
     observation[13] = GetCapsulesMatrix(state,'Attacking')
+
+
+
 
     """
     We need 
