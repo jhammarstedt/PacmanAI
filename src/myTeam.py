@@ -32,7 +32,7 @@ from collections import deque
 # Neural nets
 from DQN import *
 from game import Actions
-
+from baselineTeam import DefensiveReflexAgent
 if load_model:
   with open("saves/checkpoint") as f:
     data = f.readline()
@@ -58,20 +58,18 @@ params = {
       # 'rms_eps': 1e-6,        # RMS Prop epsilon (switched to adam)
 
       # Epsilon value (epsilon-greedy)
-      'eps': 1.0,  # Epsilon start value
+      'eps': 0.5,  # Epsilon start value
       'eps_final': 0.1,  # Epsilon end value
-      'eps_step': 100000,  # Epsilon steps between start and end (linear)
+      'eps_step': 2,  # Epsilon steps between start and end (linear)
 
 
     }
-DQN_NET = None
-CNT = None
 #################
 # Team creation #
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DQN_agent', second = 'defensiveDQN', **kwargs):
+               first = 'DefensiveReflexAgent', second = 'DQN_agent', **kwargs):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -87,9 +85,10 @@ def createTeam(firstIndex, secondIndex, isRed,
   behavior is what you want for the nightly contest.
   """
   #return [eval(DQN_agent),eval(DQN_agent))]  # maybe like this
-  print(f"FIRST TEAM {first}")
+  print(f"PLayer 1: {first}")
+  print(f"Player 2: {first}")
   # The following line is an example only; feel free to change it.
-  return [eval(first)(firstIndex, **kwargs), eval(second)(secondIndex, **kwargs)]
+  return [eval(first)(firstIndex), eval(second)(secondIndex, **kwargs)]
 
 
 
@@ -121,7 +120,6 @@ class DQN_agent(CaptureAgent):
       self.sess = tf.Session(config = tf.ConfigProto(gpu_options = gpu_options))
     self.qnet = DQN(self.params)
 
-    DQN_NET = self.qnet
 
     # time started
     self.general_record_time = time.strftime("%a_%d_%b_%Y_%H_%M_%S", time.localtime())
@@ -131,8 +129,6 @@ class DQN_agent(CaptureAgent):
 
     # Stats
     self.cnt = self.qnet.sess.run(self.qnet.global_step)
-    global CNT
-    CNT = self.cnt
     self.local_cnt = 0
 
     self.numeps = 0
@@ -173,13 +169,6 @@ class DQN_agent(CaptureAgent):
     '''
      Your initialization code goes here, if you need any.
      '''
-
-
-    #self.start = gameState.getAgentPosition(self.index)
-    #print("start ",self.start)
-    #state = self.getStateMatrices(gameState)
-    #state = self.mergeStateMatrices(state)
-    #print(state)
 
     # Reset reward
     self.last_score = 0
@@ -385,7 +374,6 @@ class DQN_agent(CaptureAgent):
     self.observation_step(gameState)
 
     # Print stats
-    # Todo: Enable printout
     log_file = open('./logs/'+str(self.general_record_time)+'-l-'+str(self.params['width'])+'-m-'+str(self.params['height'])+'-x-'+str(self.params['num_training'])+'.log','a')
     log_file.write("# %4d | steps: %5d | steps_t: %5d | t: %4f | r: %12f | e: %10f " %
                    (self.numeps,self.local_cnt, self.cnt, time.time()-self.s, self.ep_rew, self.params['eps']))
