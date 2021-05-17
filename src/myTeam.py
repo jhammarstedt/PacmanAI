@@ -280,31 +280,88 @@ class DQN_agent(CaptureAgent):
     count = foodgrid.count()
     return count
 
-  def updateLastReward(self,gameState):
-    # Process current experience reward
-    # TODO CHANGE REWRDS
-    # -1 for loosing time -> nothing happens
-    # +1 eat food -> store increases
-    # +5 eat Pill -> scares ghosts
-    # -100 get eaten by ghost / pacman -> in starting positon and nothing changes
-    # +10 positive score / drop
-    # +50 eat ghost / eat pacman
-    # -2 our food gets eaten
+  def updateLastReward(self):
 
-    self.current_score = CaptureAgent.getScore(self,gameState)
+    # GameState objects
+    lastGameState = self.getPreviousObservation()
+    currentGameState = self.getCurrentObservation()
 
-    reward = self.current_score - self.last_score
+    # AgentState objects
+      # start = startConfiguration
+      # configuration = startConfiguration
+      # isPacman = boolean
+      # scaredTimer = float
 
-    ourFoodDiff = self.ourFood - self.CountOurFood(gameState)
-    theirFoodDiff = self.theirFood - self.CountTheirFood(gameState)
+    myLastState = lastGameState.getAgentState(self.index) # Returns AgentState object
+    myCurrentState = currentGameState.getAgentState(self.index) # Returns AgentState object
 
-    self.ourFood = self.CountOurFood(gameState)
-    self.theirFood = self.CountTheirFood(gameState)
+    # Position
+    xLast, yLast = lastGameState.getAgentPosition(self.index)
+    xCurr, yCurr = currentGameState.getAgentPosition(self.index)
 
+    # Score information
+    lastScore = self.getScore(lastGameState)
+    currentScore = self.getScore(currentGameState)
+    self.last_score = lastScore #not used anymore
+    self.current_score = currentScore #not used anymore
 
-    reward = reward + ourFoodDiff - theirFoodDiff #adding the more food we have over them
+    # General food and capsule information
+    lastFood = self.getFood(lastGameState)
+    lastFoodDefending = self.getFoodYouAreDefending(lastGameState)
+    currentFood = self.getFoodYouAreDefending(currentGameState)
+    currentFoodDefending = self.getFoodYouAreDefending(currentGameState)
+    self.ourFood = self.CountOurFood(gameState) # not used anymore
+    self.theirFood = self.CountTheirFood(gameState) # not used anymore
 
-    self.last_score = self.current_score
+    lastCapsules = self.getCapsules(lastGameState)
+    lastCapsulesDefending = self.getCapsulesYouAreDefending(lastGameState)
+    currentCapsules = self.getCapsules(currentGameState)
+    currentCapsulesDefending = self.getCapsulesYouAreDefending(currentGameState)
+
+    # To check if Pacman ate or dropped or lost food
+    lastFoodCarrying = myLastState.numCarrying
+    currentFoodCarrying = myCurrentState.numCarrying
+
+    # Check if pacman returned food to our field
+    lastFoodReturned = myLastState.numReturned
+    currentFoodReturned = myCurrentState.numReturned
+
+    # Add accumulated Reward
+    reward = 0
+
+    A = currentFoodCarrying - lastFoodCarrying # Increase == ate food, Decrease = dropped food || got eaten
+    B = currentFoodReturned - lastFoodReturned # Increase == Dropped food
+    C = currentCapsulesDefending.count() - lastCapsulesDefending.count() # Decrease == Enemy ate capsules
+    D = currentCapsules.count() - lastCapsules.count() # Decrease == Ate capsules
+    E = currentFood.count() - lastFood.count()
+    F = currentFoodDefending.count() - lastFoodDefending.count() # Decrease == our food eaten, Increase ==  Our Ghost ate pacman || Dropped food
+    G = currentScore - lastScore
+
+    if A > 0:
+      reward += A # Eat food
+    elif A < 0:
+      if B > 0:
+        reward += B # Dropped food
+      else:
+        reward -= 100 # Got eaten ==> Explosion
+
+    if C < 0:
+      reward -= 5 # Our capsule eaten
+
+    if D < 0:
+      reward += 5 # Eat capsule
+
+    if F < 0:
+      reward -= 1 # Our food eaten
+    elif F > 0:
+      if B == 0:
+        reward += 20 # Eat enemy pacman. Not completely correct, becuase other team member might have dropped food
+
+    reward += G
+
+    if reward == 0:
+      reward = -1 # Nothing happens, punish time
+
 
     if (gameState.isOver()):
       if CaptureAgent.getScore(self, gameState) > 0:
@@ -312,7 +369,7 @@ class DQN_agent(CaptureAgent):
       if (self.terminal and self.won):
         return 10000. # win is great
       else:
-        return -100 # we lost
+        return -1000 # we lost
     else:
       if self.first_state:  # since we will start in the starting position duh
         self.first_state = False
@@ -321,16 +378,7 @@ class DQN_agent(CaptureAgent):
           self.atCenter=False
           return -100  # we were eaten and spawned back to start
 
-      if reward > 10:
-        return 50
-      elif reward > 0:
-        return 10.    # Dropped less than 20 candy in own field
-      elif reward < -10:
-        return -10.
-      elif reward < 0: # need to get back to the lead
-        return -5
-      else:
-        return -1 #punish time
+    return reward  
 
 
 
@@ -340,7 +388,7 @@ class DQN_agent(CaptureAgent):
       self.last_state = np.copy(self.current_state)
       self.current_state = self.getStateMatrices(gameState)
 
-      self.last_reward = self.updateLastReward(gameState) #update reward
+      self.last_reward = self.updateLastReward() #upate reward
       self.ep_rew += self.last_reward
 
       # Store last experience into memory
@@ -396,7 +444,7 @@ class DQN_agent(CaptureAgent):
   def train(self):
     # Train
     if (self.local_cnt > self.params['train_start']):
-      batch = random.sample(self.replay_mem, self.params['batch_size'])
+      batch = random.sample(self.replay_mem, self.params['batch_size']) # Why random sampling?
       batch_s = [] # States (s)
       batch_r = [] # Rewards (r)
       batch_a = [] # Actions (a)
@@ -428,6 +476,7 @@ class DQN_agent(CaptureAgent):
       """
       This will be our main method from where we get the action!
       """
+
       if not self.atCenter and self.center_counter == len(self.ASTARPATH) - 1:
         self.atCenter = True
         self.center_counter = 0
@@ -446,6 +495,7 @@ class DQN_agent(CaptureAgent):
       if move not in legal:
         move = Directions.STOP
 
+      # Save last gameState
       return move
 
   """Adjusted CODE FROM DQN paper TO GET STATE SPACE for CTF"""
