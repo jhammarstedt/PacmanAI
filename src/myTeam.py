@@ -22,8 +22,7 @@ import sys
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-GPU = True
-COLAB_SAVE = False
+GPU = False
 load_model = True
 TRAIN = False
 #Replay memory
@@ -33,6 +32,7 @@ from collections import deque
 from DQN import *
 from game import Actions
 from baselineTeam import DefensiveReflexAgent
+
 if load_model:
   with open("saves/checkpoint") as f:
     data = f.readline()
@@ -54,13 +54,11 @@ params = {
 
       'discount': 0.95,  # Discount rate (gamma value)
       'lr': .0002,  # Learning reate
-      # 'rms_decay': 0.99,      # RMS Prop decay (switched to adam)
-      # 'rms_eps': 1e-6,        # RMS Prop epsilon (switched to adam)
 
       # Epsilon value (epsilon-greedy)
-      'eps': 0.5,  # Epsilon start value
+      'eps': 1,  # Epsilon start value
       'eps_final': 0.1,  # Epsilon end value
-      'eps_step': 2,  # Epsilon steps between start and end (linear)
+      'eps_step': 100000,  # Epsilon steps between start and end (linear)
 
 
     }
@@ -232,7 +230,7 @@ class DQN_agent(CaptureAgent):
 
   def getMove(self, gameState):
     # Exploit / Explore
-    if np.random.rand() > self.params['eps']:
+    if np.random.rand() > self.params['eps'] or not TRAIN:
       # Exploit action
       self.Q_pred = self.qnet.sess.run(
         self.qnet.y,
@@ -341,21 +339,24 @@ class DQN_agent(CaptureAgent):
       if len(self.replay_mem) > self.params['mem_size']:
         self.replay_mem.popleft()
 
-      # Save model
-      if(params['save_file']):
-        if self.local_cnt > self.params['train_start'] and self.local_cnt % self.params['save_interval'] == 0:
-          self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
+      if TRAIN:
+        # Save model
+        if(params['save_file']):
+          if self.local_cnt > self.params['train_start'] and self.local_cnt % self.params['save_interval'] == 0:
+            self.qnet.save_ckpt('saves/model-' + params['save_file'] + "_" + str(self.cnt) + '_' + str(self.numeps))
 
-          print('Model saved')
+            print('Model saved')
 
-      # Train
-      self.train()
+        # Train
+        self.train()
+
+        self.params['eps'] = max(self.params['eps_final'],
+                                 1.00 - float(self.cnt) / float(self.params['eps_step']))
 
     # Next
     self.local_cnt += 1
     self.frame += 1
-    self.params['eps'] = max(self.params['eps_final'],
-                             1.00 - float(self.cnt)/ float(self.params['eps_step']))
+
 
 
   def observationFunction(self, state):
@@ -406,7 +407,6 @@ class DQN_agent(CaptureAgent):
       batch_t = np.array(batch_t)
 
       self.cnt, self.cost_disp = self.qnet.train(batch_s, batch_a, batch_t, batch_n, batch_r)
-
 
   def get_onehot(self, actions):
     """ Create list of vectors with 1 values at index of action in list """
@@ -544,6 +544,24 @@ class DQN_agent(CaptureAgent):
 
       return matrix
 
+    def GetOurScaredGhostMatrix(state):
+      """ Return matrix with the player coordinates set to 1 """
+      width, height = state.data.layout.width, state.data.layout.height
+      matrix = np.zeros((height, width), dtype=np.int8)
+
+      pos = state.getAgentPosition(self.index)
+      
+      # TODO distinguish between pacman and ghost
+      cell = 1
+      matrix[-1 - int(pos[1])][int(pos[0])] = cell
+
+      return matrix
+
+
+      pass
+
+    def GetTheirScaredGhostMatrix(state):
+      pass
     def GetOurCapsulesMatrix(state):
       """ Return matrix with capsule coordinates set to 1 """
       width, height = state.data.layout.width, state.data.layout.height
