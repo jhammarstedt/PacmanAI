@@ -381,6 +381,7 @@ class DQN_agent(CaptureAgent):
                 if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
                     self.atCenter = False
                     self.ASTARPATH = self.getCenterPos(currentGameState)
+                    self.center_counter = 0
                     return -100  # we were eaten and spawned back to start
 
         return reward
@@ -486,8 +487,6 @@ class DQN_agent(CaptureAgent):
             self.atCenter = True
             self.center_counter = 0
 
-        # if len(self.ASTARPATH) == 0:  # check if we have moved to centerspot
-        #  self.atCenter = True
 
         if self.atCenter:
             move = self.getMove(gameState)
