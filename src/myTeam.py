@@ -89,8 +89,8 @@ def createTeam(firstIndex, secondIndex, isRed,
   behavior is what you want for the nightly contest.
   """
     # return [eval(DQN_agent),eval(DQN_agent))]  # maybe like this
-    print(f"PLayer 1: {first}")
-    print(f"Player 2: {first}")
+    print(f"PLayer 1: {first} red")
+    print(f"Player 2: {second} orange")
     # The following line is an example only; feel free to change it.
     return [eval(first)(firstIndex), eval(second)(secondIndex, **kwargs)]
 
@@ -201,10 +201,8 @@ class DQN_agent(CaptureAgent):
         self.atCenter = False  # first walk to center before we start DQN
         self.center_counter = 0  # the list we will go through to get
 
-        # ASTAR Path to center
-        self.ASTARPATH = deque(
-            self.aStarSearch(gameState.getAgentPosition(self.index), gameState, [(12, 8)]))  # hard code for now
-
+        center_point = self.getCenterPos(gameState)
+        self.ASTARPATH = self.getCenterPos(gameState)
         # Next
         self.frame = 0
         self.numeps += 1
@@ -213,8 +211,18 @@ class DQN_agent(CaptureAgent):
     def getCenterPos(self,gameState):
       center_x = self.params['width']
       center_y = self.params['height']
+      # ASTAR Path to center
+      center_red = [(16, 10), (16, 7)]
+      center_blue = [(17, 7), (17, 10)]
+      i = random.randint(0,1)
+      if gameState.isOnRedTeam(self.index):
+         return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState, [center_red[i]]))  # hard code for now
 
-      pass
+
+      else:
+        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState, [center_red[i]]))  # hard code for now
+
+
     def get_direction(self, value):
         if value == 0.:
             return Directions.NORTH
@@ -372,6 +380,7 @@ class DQN_agent(CaptureAgent):
             else:
                 if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
                     self.atCenter = False
+                    self.ASTARPATH = self.getCenterPos(currentGameState)
                     return -100  # we were eaten and spawned back to start
 
         return reward
@@ -665,40 +674,6 @@ class DQN_agent(CaptureAgent):
             matrix[-1 - int(pos[1])][int(pos[0])] = cell
 
             return matrix
-
-        # def getFriendPacmanMatrix(state):
-        #   """ Return matrix with our teammate coordinates set to 1 """
-        #   width, height = state.data.layout.width, state.data.layout.height
-        #   matrix = np.zeros((height, width), dtype=np.int8)
-        #   team = self.getTeam(state)
-        #
-        #
-        #   for agent in team:
-        #       if agent != self.index:
-        #         pos = state.getAgentPosition(agent)
-        #         if self.isPacman(state,agent): #check if friend is pacman or not
-        #           cell = 1
-        #         else: cell =0
-        #         matrix[-1 - int(pos[1])][int(pos[0])] = cell
-        #
-        #   return matrix
-        # def getEnemyPacmanMatrix(state):
-        #   """ Return matrix with ghost coordinates set to 1 """
-        #   width, height = state.data.layout.width, state.data.layout.height
-        #   matrix = np.zeros((height, width), dtype=np.int8)
-        #   enemies = self.getOpponents(state)
-        #
-        #   for agent in enemies:
-        #     # TODO use probabilities if the
-        #
-        #     #! TODO check if food is eaten nearby!
-        #     pos = state.getAgentPosition(agent)
-        #     if pos is not None:
-        #       cell = 1
-        #       matrix[-1 - int(pos[1])][int(pos[0])] = cell
-        #
-        #   return matrix
-        #
 
         def GetFoodMatrix(state, who: str):
             width, height = state.data.layout.width, state.data.layout.height
