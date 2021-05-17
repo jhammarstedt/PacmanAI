@@ -352,7 +352,7 @@ class DQN_agent(CaptureAgent):
       reward += 5 # Eat capsule
 
     if F < 0:
-      reward -= 1 # Our food eaten
+      reward -= F # Our food eaten
     elif F > 0:
       if B == 0:
         reward += 20 # Eat enemy pacman. Not completely correct, becuase other team member might have dropped food
