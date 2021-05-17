@@ -11,21 +11,21 @@ class DQN:
         self.params = params
         self.network_name = 'qnet'
         self.sess = tf.Session()
-        self.x = tf.placeholder('float', [None, params['width'],params['height'], 8],name=self.network_name + '_x')
+        self.x = tf.placeholder('float', [None, params['width'],params['height'], 14],name=self.network_name + '_x')
         self.q_t = tf.placeholder('float', [None], name=self.network_name + '_q_t')
         self.actions = tf.placeholder("float", [None, 4], name=self.network_name + '_actions')
         self.rewards = tf.placeholder("float", [None], name=self.network_name + '_rewards')
         self.terminals = tf.placeholder("float", [None], name=self.network_name + '_terminals')
 
         # Layer 1 (Convolutional)
-        layer_name = 'conv1' ; size = 3 ; channels = 8 ; filters = 16 ; stride = 1
+        layer_name = 'conv1' ; size = 3 ; channels = 14 ; filters = 24 ; stride = 1
         self.w1 = tf.Variable(tf.random_normal([size,size,channels,filters], stddev=0.01),name=self.network_name + '_'+layer_name+'_weights')
         self.b1 = tf.Variable(tf.constant(0.1, shape=[filters]),name=self.network_name + '_'+layer_name+'_biases')
         self.c1 = tf.nn.conv2d(self.x, self.w1, strides=[1, stride, stride, 1], padding='SAME',name=self.network_name + '_'+layer_name+'_convs')
         self.o1 = tf.nn.relu(tf.add(self.c1,self.b1),name=self.network_name + '_'+layer_name+'_activations')
 
         # Layer 2 (Convolutional)
-        layer_name = 'conv2' ; size = 3 ; channels = 16 ; filters = 32 ; stride = 1
+        layer_name = 'conv2' ; size = 3 ; channels = 24 ; filters = 32 ; stride = 1
         self.w2 = tf.Variable(tf.random_normal([size,size,channels,filters], stddev=0.01),name=self.network_name + '_'+layer_name+'_weights')
         self.b2 = tf.Variable(tf.constant(0.1, shape=[filters]),name=self.network_name + '_'+layer_name+'_biases')
         self.c2 = tf.nn.conv2d(self.o1, self.w2, strides=[1, stride, stride, 1], padding='SAME',name=self.network_name + '_'+layer_name+'_convs')
