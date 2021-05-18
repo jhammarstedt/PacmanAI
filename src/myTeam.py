@@ -29,9 +29,9 @@ from collections import deque
 # Neural nets
 from DQN import *
 from game import Actions
-from baselineTeam import DefensiveReflexAgent
+from baselineTeam import ReflexCaptureAgent,DefensiveReflexAgent
 
-load_model = False
+load_model = True
 if load_model:
     with open("saves/checkpoint") as f:
         data = f.readline()
@@ -47,7 +47,7 @@ params = {
     'save_interval': 55000,  # original 100000
 
     # Training parameters
-    'TRAIN': True,
+    'TRAIN': False,
     'train_start': 5000,  # Episodes before training starts | orgiginal 5000
     'batch_size': 32,  # Replay memory batch size | original 32
     'mem_size': 100000,  # Replay memory size
@@ -74,7 +74,7 @@ params = {
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='DefensiveReflexAgent', second='DQN_agent', **kwargs):
+               first='terminator', second='DQN_agent', **kwargs):
     """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -118,7 +118,9 @@ class DQN_agent(CaptureAgent):
         # Load parameters from user-given arguments
         self.params['width'] = 34  # TODO gameState.data.layout.width
         self.params['height'] = 18  # TODO gameState.data.layout.height
-
+        if self.params['TRAIN']:
+            self.params['eps'] = 0.
+            params['eps'] =0.
         # Start Tensorflow session
         # TODO Add GPU
         if self.params['GPU']:
@@ -207,20 +209,37 @@ class DQN_agent(CaptureAgent):
         self.frame = 0
         self.numeps += 1
 
+    def isWall(self,gameState,pos:tuple):
+        grid = gameState.data.layout.walls
+        return grid[pos[0]][pos[1]]
 
     def getCenterPos(self,gameState):
-      center_x = self.params['width']
-      center_y = self.params['height']
-      # ASTAR Path to center
-      center_red = [(16, 10), (16, 7)]
-      center_blue = [(17, 7), (17, 10)]
-      i = random.randint(0,1)
-      if gameState.isOnRedTeam(self.index):
-         return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState, [center_red[i]]))  # hard code for now
+        width = self.params['width']
+        height = self.params['height']
+        # ASTAR Path to center
 
+        if gameState.isOnRedTeam(self.index):
+            pos_x = int(width / 2) - 1
+            for i in range(1000):
+              pos_y = random.randint(int(height / 4), int(0.75 * height))
 
-      else:
-        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState, [center_red[i]]))  # hard code for now
+              center = (pos_x,pos_y)
+              if not self.isWall(gameState,center):
+                  return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                [center]))  # hard code for now
+            else: #blue
+                pos_x = int(width / 2) + 1
+                for i in range(1000):
+                    pos_y = random.randint(int(height / 4), int(0.75 * height))
+                    center = (pos_x, pos_y)
+                    if not self.isWall(gameState, center):
+                        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                      [center]))  # hard code for now
+
+        #center_red = [(16, 10), (16, 7)]
+        #center_blue = [(17, 7), (17, 10)] #! needs to be fixed
+        #i = random.randint(0,1)
+
 
 
     def get_direction(self, value):
@@ -712,7 +731,7 @@ class DQN_agent(CaptureAgent):
             return matrix
 
         def predictEnemyMatrix(state):
-            self.last_food = GetFoodMatrix(state, 'Attacking')
+            self.last_food = GetFoodMatrix(state, 'Defending')
             # Check difference from previous
             # if enemy_isempty on our side
 
@@ -811,3 +830,225 @@ class DQN_agent(CaptureAgent):
             return currentPath, currentPosition
         else:
             return currentPath
+
+class terminator(ReflexCaptureAgent):
+    """
+
+    This agent should be mainly defensive
+    1. if we can find enemy, checks enemies given where candy has been eaten
+    2. If none of this, we move towards the most centered capsule to defend
+
+    3. interupt this action as soon as we see an enemy
+    4. Maybe stay close to food
+
+    """
+    # ! 5. What do we do if we're scared
+    def registerInitialState(self, gameState):
+        ReflexCaptureAgent.registerInitialState(self, gameState)
+        self.last_food = CaptureAgent.getFoodYouAreDefending(self, gameState)
+        self.best_capsule = self.get_best_capsule(gameState)
+
+        self.at_capsule = False
+        self.path_to_capsule = self.path_to_pos(gameState,self.best_capsule)
+
+    def path_to_pos(self,gameState,goal_pos:tuple):
+        current_pos = gameState.getAgentPosition(self.index)
+        return deque(self.aStarSearch(current_pos, gameState, [goal_pos]))
+
+    def get_best_capsule(self,gameState):
+        """
+        A function to get the centermost capsule
+        If it's not very centered, we return the center pos/border pos instead
+        """
+        # First we get the center half the map that has the shortest path to the center
+        # Start by just finding the center for us and then see if there's a capsule in there
+
+        # Get capsule map
+        # Find Center area in our map
+        # See if capsule is in this area
+        width, height = gameState.data.layout.width, gameState.data.layout.height
+
+        current_capsules = CaptureAgent.getCapsulesYouAreDefending(self, gameState)
+        #map = gameState.data.layout.walls
+
+        center = (int(width/2),int(height/2))
+        min = 10**100 #arbirtrary big number
+        closest_capsule = None
+        for capsule in current_capsules: #find the capsule closest to the middle
+            temp = CaptureAgent.getMazeDistance(self, capsule, center)
+            if min > CaptureAgent.getMazeDistance(self, capsule, center):
+                closest_capsule = capsule
+                min = temp
+        return closest_capsule
+
+
+        #? See what centerpos is the most open
+
+        pass
+    def chooseAction(self, gameState):
+        """
+        Picks among the actions with the highest Q(s,a).
+        """
+        if not self.at_capsule:
+            if len(self.path_to_capsule)==0:
+                self.at_capsule = True
+            else:
+                action = self.path_to_capsule.popleft()
+                return action
+
+
+        actions = gameState.getLegalActions(self.index)
+        #self.predict_enemies(gameState)
+        # You can profile your evaluation time by uncommenting these lines
+        # start = time.time()
+        values = [self.evaluate(gameState, a) for a in actions]
+        # print('eval time for agent %d: %.4f' % (self.index, time.time() - start))
+
+        maxValue = max(values)
+        #print([a for a, v in zip(actions, values)])
+        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
+
+        foodLeft = len(self.getFood(gameState).asList())
+
+        if foodLeft <= 2:
+            bestDist = 9999
+            for action in actions:
+                successor = self.getSuccessor(gameState, action)
+                pos2 = successor.getAgentPosition(self.index)
+                dist = self.getMazeDistance(self.start, pos2)
+                if dist < bestDist:
+                    bestAction = action
+                    bestDist = dist
+            return bestAction
+
+        return random.choice(bestActions)
+
+    def outsmart_enemies(self,gameState)->list:
+        """Check where the theif is"""
+        ourfood = CaptureAgent.getFoodYouAreDefending(self,gameState)
+        eaten = None
+        if self.last_food.count() != ourfood.count(): #check if there is a food eaten somewhere
+            eaten = [(i,k) for i in range(ourfood.width) for k in range(ourfood.height) if
+                     self.last_food[i][k] != ourfood[i][k]]
+
+        self.last_food = ourfood # update last food state
+        return eaten
+
+
+    def get_our_center(self, gameState):
+        width, height = gameState.data.layout.width, gameState.data.layout.height
+        if gameState.isOnRedTeam(self.index):
+            x_pos, y_pos = int(width / 4), int(height / 4)
+            pass
+        else:
+            x_pos, y_pos = int(width * (3 / 4)), int(height * (3 / 4))
+            pass
+
+    def getFeatures(self, gameState, action):
+        """
+        Gets the features in the next state, so given the next
+        state we see if we got closer to the position we want to be in
+        """
+
+        features = util.Counter()
+        successor = self.getSuccessor(gameState, action)
+
+        myState = successor.getAgentState(self.index)
+        myPos = myState.getPosition()
+
+        # Computes whether we're on defense (1) or offense (0)
+        features['onDefense'] = 1
+        if myState.isPacman: features['onDefense'] = 0
+
+        # Computes distance to invaders we can see,
+        #! changed to A*
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        features['numInvaders'] = len(invaders)
+        if len(invaders) > 0:
+            dists = [len(self.aStarSearch(myPos, gameState,[a.getPosition()])) for a in invaders]
+            features['invaderDistance'] = min(dists)
+
+        if action == Directions.STOP: features['stop'] = 1
+        rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+        if action == rev: features['reverse'] = 1
+
+
+        #See where enemies eat food, then get the closest food and go there
+        missing_food = self.outsmart_enemies(gameState)
+
+        if missing_food is not None:
+            # if len(missing_food) > 1:
+            #     pass  # ! here we can see if we ate an enemy or if they have 2 ppl eating at the same time
+            all_paths = [[f,self.aStarSearch(myPos,gameState,[f])]
+                             for f in missing_food]
+            self.path_to_theif = min(all_paths)[1]
+
+            features['secret_foodtheif'] = len(self.path_to_theif)
+
+
+        return features
+
+    def getWeights(self, gameState, action):
+        #! why does it behave strange here??
+        return {'numInvaders': -1000,
+                'onDefense': 100,
+                'invaderDistance': -10,
+                'stop': -100,
+                'reverse': -2,
+                'secret_foodtheif': -200}
+
+    def aStarSearch(self, startPosition, gameState, goalPositions, avoidPositions=[], returnPosition=False):
+        """
+    Finds the distance between the agent with the given index and its nearest goalPosition
+    """
+        walls = gameState.getWalls()
+        width = walls.width
+        height = walls.height
+        walls = walls.asList()
+
+        actions = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+        actionVectors = [Actions.directionToVector(action) for action in actions]
+        # Change action vectors to integers so they work correctly with indexing
+        actionVectors = [tuple(int(number) for number in vector) for vector in actionVectors]
+
+        # Values are stored a 3-tuples, (Position, Path, TotalCost)
+
+        currentPosition, currentPath, currentTotal = startPosition, [], 0
+        # Priority queue uses the maze distance between the entered point and its closest goal position to decide which comes first
+        queue = util.PriorityQueueWithFunction(
+            lambda entry: entry[2] + width * height if entry[0] in avoidPositions else 0 + min(
+                util.manhattanDistance(entry[0], endPosition) for endPosition in goalPositions))
+
+        # Keeps track of visited positions
+        visited = {currentPosition}
+
+        while currentPosition not in goalPositions:
+
+            possiblePositions = [((currentPosition[0] + vector[0], currentPosition[1] + vector[1]), action) for
+                                 vector, action in zip(actionVectors, actions)]
+            legalPositions = [(position, action) for position, action in possiblePositions if position not in walls]
+
+            for position, action in legalPositions:
+                if position not in visited:
+                    visited.add(position)
+                    queue.push((position, currentPath + [action], currentTotal + 1))
+
+            # This shouldn't ever happen...But just in case...
+            if len(queue.heap) == 0:
+                return None
+            else:
+                currentPosition, currentPath, currentTotal = queue.pop()
+
+        if returnPosition:
+            return currentPath, currentPosition
+        else:
+            return currentPath
+
+    def evaluate(self, gameState, action):
+        """
+        Computes a linear combination of features and feature weights
+        """
+        features = self.getFeatures(gameState, action)
+        weights = self.getWeights(gameState, action)
+        return features * weights
