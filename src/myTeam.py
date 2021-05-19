@@ -1000,13 +1000,13 @@ class terminator(ReflexCaptureAgent):
         return features
 
     def getWeights(self, gameState, action):
-        #! why does it behave strange here??
+        #! why does it behave strange herp??
         return {'numInvaders': -1000,
                 'onDefense': 100,
                 'invaderDistance': -10,
                 'stop': -100,
                 'reverse': -2,
-                'secret_foodtheif': -200}
+                'secret_foodtheif': 15}
 
     def aStarSearch(self, startPosition, gameState, goalPositions, avoidPositions=[], returnPosition=False):
         """
