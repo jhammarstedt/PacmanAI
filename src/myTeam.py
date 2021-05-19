@@ -15,7 +15,7 @@
 from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 import game
 import numpy as np
 import sys
