@@ -370,41 +370,40 @@ class DQN_agent(CaptureAgent):
         F = currentFoodDefending.count() - lastFoodDefending.count() # Decrease == our food eaten, Increase ==  Our Ghost ate pacman || Dropped food
         G = currentScore - lastScore
 
+        if self.isPacman(currentGameState,self.index):
+            reward +=1
+
         if A > 0:
-            reward += A  # Eat food
+            reward += A*2  # Eat food
         elif A < 0:
             if B > 0:
-                reward += B  # Dropped food
+                reward += B*10  # Dropped food
             else:
                 reward -= 100  # Got eaten ==> Explosion
 
-        if C < 0:
-            reward -= 5  # Our capsule eaten
+        if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
+                self.atCenter = False
+                self.ASTARPATH = self.getCenterPos(currentGameState)
+                self.center_counter = 0
+                reward -= 100  # we were eaten and spawned back to start
+
+        # if C < 0:
+        #     reward -= 5  # Our capsule eaten
 
         if D < 0:
-            reward += 5  # Eat capsule
+            reward += 10  # Eat capsule
 
-        if F < 0:
-            reward -= F  # Our food eaten
-        elif F > 0:
-            if B == 0:
-                reward += 20  # Eat enemy pacman. Not completely correct, becuase other team member might have dropped food
+        # if F < 0:
+        #     reward -= F  # Our food eaten
+        # elif F > 0:
+        #     if B == 0:
+        #         reward += 20  # Eat enemy pacman. Not completely correct, becuase other team member might have dropped food
 
         reward += G
 
         if reward == 0:
             reward = -1  # Nothing happens, punish time
 
-
-        # else:
-        #     if self.first_state:  # since we will start in the starting position duh
-        #         self.first_state = False
-        #     else:
-        #         if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
-        #             self.atCenter = False
-        #             self.ASTARPATH = self.getCenterPos(currentGameState)
-        #             self.center_counter = 0
-        #             return -100  # we were eaten and spawned back to start
 
         return reward
 
