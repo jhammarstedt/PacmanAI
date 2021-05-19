@@ -304,13 +304,13 @@ class DQN_agent(CaptureAgent):
         count = foodgrid.count()
         return count
 
-    def updateLastReward(self):
+    def updateLastReward(self,state):
 
         # GameState objects
         lastGameState = self.getPreviousObservation()
         currentGameState = self.getCurrentObservation()
 
-        if (currentGameState.isOver()):
+        if (state.isOver()):
             print('GAME IS OVER')
             if CaptureAgent.getScore(self, currentGameState) > 0:
                 self.won = True
@@ -414,7 +414,7 @@ class DQN_agent(CaptureAgent):
             self.last_state = np.copy(self.current_state)
             self.current_state = self.getStateMatrices(gameState)
 
-            self.last_reward = self.updateLastReward()  # upate reward
+            self.last_reward = self.updateLastReward(gameState)  # upate reward
             self.ep_rew += self.last_reward
 
             # Store last experience into memory
