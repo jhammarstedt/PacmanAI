@@ -856,15 +856,31 @@ class OffensiveAgent(ReflexCaptureAgent):
         # TODO Add return for food
 
 
-    # ============== HELPER FUNCTIONS ===============
 
     def isWall(self,gameState,pos:tuple):
         grid = gameState.data.layout.walls
         return grid[pos[0]][pos[1]]
 
-    def getCenterPos(self,gameState,avoid_enemies=True):
+    def getCenterPos(self, gameState,avoid_enemies=True,run_away=False):
         width = 34
         height = 18
+
+        high =0.75
+        low = 0.25
+
+        adjust_x = 1 #quick fix for pre finals
+        if run_away:
+            adjust_x = 9 # just to get back out of sight
+            # current_pos = gameState.getAgentPosition(self.index)
+            # if current_pos[1]<int(height/2):
+            #     high = 0.8
+            #     low = 0.5
+            # else:
+            #     high = 0.5
+            #     low = 0.1
+
+            #if gameState.AgentState.getPosition(self.index)
+
         # ASTAR Path to center
         pos_to_avoid = []
         if avoid_enemies:
@@ -874,22 +890,22 @@ class OffensiveAgent(ReflexCaptureAgent):
                 pos_to_avoid = [ghost[0].getPosition()]
 
         if gameState.isOnRedTeam(self.index):
-            pos_x = int(width / 2) - 1
+            pos_x = int(width / 2) - adjust_x
             for i in range(1000):
-                pos_y = random.randint(int(height / 4), int(0.75 * height))
+                pos_y = random.randint(int(height * low), int(high * height))
 
                 center = (pos_x,pos_y)
                 if not self.isWall(gameState,center):
                     return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
                                                   [center],avoidPositions=pos_to_avoid))  # hard code for now
-            else: #blue
-                pos_x = int(width / 2) + 1
-                for i in range(1000):
-                    pos_y = random.randint(int(height / 4), int(0.75 * height))
-                    center = (pos_x, pos_y)
-                    if not self.isWall(gameState, center):
-                        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                      [center],avoidPositions=pos_to_avoid))  # hard code for now
+        else: #blue
+            pos_x = int(width / 2) + adjust_x
+            for i in range(1000):
+                pos_y = random.randint(int(height * low), int(high * height))
+                center = (pos_x, pos_y)
+                if not self.isWall(gameState, center):
+                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                  [center],avoidPositions=pos_to_avoid))  # hard code for now
 
 
     def path_to_pos(self,gameState,goal_pos:tuple):
@@ -1004,7 +1020,7 @@ class OffensiveAgent(ReflexCaptureAgent):
         return {'foodScore': 50, #previous 100
                 'onOffense': 10,
                 'distanceToFood': -1,
-                'distanceToCapsule': -5,
+                'distanceToCapsule': -3,
                 'threatDistance': +5,
                 'ghostDistance': -10,
                 'stop': -100,
@@ -1020,12 +1036,17 @@ class OffensiveAgent(ReflexCaptureAgent):
         """
         actions = gameState.getLegalActions(self.index)
 
-        # You can profile your evaluation time by uncommenting these lines
-        # start = time.time()
         values = [self.evaluate(gameState, a) for a in actions]
-        # print('eval time for agent %d: %.4f' % (self.index, time.time() - start))
+
         if self.get_back_safe:
             if not gameState.getAgentState(self.index).isPacman:
+                if len([gameState.getAgentState(i).getPosition()
+                    for i in CaptureAgent.getOpponents(self,gameState) if gameState.getAgentState(i).getPosition() is not None])>0: #any opponents nearby?
+
+                    move = self.getCenterPos(gameState,run_away= True)
+                    if len(move) > 0:
+                        return move.popleft()
+
                 self.get_back_safe = False
             else:
                 move = self.getCenterPos(gameState,avoid_enemies=True)
@@ -1140,24 +1161,24 @@ class terminator(ReflexCaptureAgent):
                 return move_to_theif.popleft()
             else:
                 return 'Stop'
-        else:
-            capsule_action = self.path_to_pos(gameState, self.best_capsule)
-            if len(capsule_action) > 0:
-                return capsule_action.popleft()
+        # else:
+        #     capsule_action = self.path_to_pos(gameState, self.best_capsule)
+        #     if len(capsule_action) > 0:
+        #         return capsule_action.popleft()
 
 
-            if foodLeft <= 2:
-                bestDist = 9999
-                for action in actions:
-                    successor = self.getSuccessor(gameState, action)
-                    pos2 = successor.getAgentPosition(self.index)
-                    dist = self.getMazeDistance(self.start, pos2)
-                    if dist < bestDist:
-                        bestAction = action
-                        bestDist = dist
-                return bestAction
+        if foodLeft <= 2:
+            bestDist = 9999
+            for action in actions:
+                successor = self.getSuccessor(gameState, action)
+                pos2 = successor.getAgentPosition(self.index)
+                dist = self.getMazeDistance(self.start, pos2)
+                if dist < bestDist:
+                    bestAction = action
+                    bestDist = dist
+            return bestAction
 
-            return random.choice(bestActions)
+        return random.choice(bestActions)
 
     def outsmart_enemies(self,gameState)->list:
         """Check where the theif is"""
