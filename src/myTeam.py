@@ -20,6 +20,7 @@ import game
 import numpy as np
 import sys
 import os
+from util import nearestPoint
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -31,15 +32,18 @@ from DQN import *
 from game import Actions
 from baselineTeam import ReflexCaptureAgent,DefensiveReflexAgent
 
-load_model = True
+load_model = False
 if load_model:
     with open("saves/checkpoint") as f:
         data = f.readline()
         f.close()
     load = data[24:-2]  # quick fix to read the model from checkpoint
     load = f"saves/{load}"
+    print(load)
 else:
     load = None
+
+
 params = {
     # Model backups
     'load_file': load,
@@ -47,7 +51,7 @@ params = {
     'save_interval': 55000,  # original 100000
 
     # Training parameters
-    'TRAIN': False,
+    'TRAIN': True,
     'train_start': 5000,  # Episodes before training starts | orgiginal 5000
     'batch_size': 32,  # Replay memory batch size | original 32
     'mem_size': 100000,  # Replay memory size
@@ -56,8 +60,8 @@ params = {
     'lr': .0002,  # Learning reate
 
     # Epsilon value (epsilon-greedy)
-    'eps': 1,  # Epsilon start value
-    'eps_final': 0.1,  # Epsilon end value
+    'eps': 0.3,  # Epsilon start value
+    'eps_final': 0.3,  # Epsilon end value
     'eps_step': 100000,  # Epsilon steps between start and end (linear)
 
     # State matrices
@@ -74,7 +78,7 @@ params = {
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='terminator', second='DQN_agent', **kwargs):
+               first='terminator', second='OffensiveAgent', **kwargs):
     """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -92,7 +96,7 @@ def createTeam(firstIndex, secondIndex, isRed,
     print(f"PLayer 1: {first} red")
     print(f"Player 2: {second} orange")
     # The following line is an example only; feel free to change it.
-    return [eval(first)(firstIndex), eval(second)(secondIndex, **kwargs)]
+    return [eval(first)(firstIndex, **kwargs), eval(second)(secondIndex, **kwargs)]
 
 
 ##########
@@ -109,11 +113,8 @@ class DQN_agent(CaptureAgent):
         # Load parameters from user-given arguments
         self.params = params
         self.params['num_training'] = kwargs.pop('numTraining', 0)
-        if self.index == 0:
-            print(f"Initialise red DQN Agent {self.index} NO train")
-            self.params['TRAIN'] = False
-        else:
-            print(f"Initialise orange DQN Agent {self.index} train")
+
+
 
         # Load parameters from user-given arguments
         self.params['width'] = 34  # TODO gameState.data.layout.width
@@ -283,12 +284,15 @@ class DQN_agent(CaptureAgent):
             if len(a_winner) > 1:
                 move = self.get_direction(
                     a_winner[np.random.randint(0, len(a_winner))][0])
+                print("Selected move: "+str(move))
             else:
                 move = self.get_direction(
                     a_winner[0][0])
+                print("Q_pred: "+str(self.Q_pred)+" Selected move: "+str(move))
         else:
             # Random:
             move = self.get_direction(np.random.randint(0, 4))
+            print("Random move: "+str(move))
 
         # Save last_action
         self.last_action = self.get_value(move)
@@ -382,9 +386,13 @@ class DQN_agent(CaptureAgent):
             reward += A*2  # Eat food
         elif A < 0:
             if B > 0:
+<<<<<<< Updated upstream
                 reward += B*10  # Dropped food
             else:
                 reward -= 100  # Got eaten ==> Explosion
+=======
+                reward += B*2  # Dropped food
+>>>>>>> Stashed changes
 
         if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
                 self.atCenter = False
@@ -410,6 +418,19 @@ class DQN_agent(CaptureAgent):
             reward = -1  # Nothing happens, punish time
 
 
+<<<<<<< Updated upstream
+=======
+        else:
+             if self.first_state:  # since we will start in the starting position duh
+                 self.first_state = False
+             else:
+                 if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
+                     self.atCenter = False
+                     self.ASTARPATH = self.getCenterPos(currentGameState)
+                     self.center_counter = 0
+                     return -100  # we were eaten and spawned back to start
+
+>>>>>>> Stashed changes
         return reward
 
     def observation_step(self, gameState):
@@ -440,8 +461,7 @@ class DQN_agent(CaptureAgent):
                 # Train
                 self.train()
 
-                self.params['eps'] = max(self.params['eps_final'],
-                                         1.00 - float(self.cnt) / float(self.params['eps_step']))
+                self.params['eps'] =  max(self.params['eps_final'], 1.00 - float(self.cnt) / float(self.params['eps_step']))
 
         # Next
         self.local_cnt += 1
@@ -513,7 +533,7 @@ class DQN_agent(CaptureAgent):
             self.atCenter = True
             self.center_counter = 0
 
-
+        #self.atCenter = True # Always true
         if self.atCenter:
             move = self.getMove(gameState)
         else:
@@ -522,6 +542,7 @@ class DQN_agent(CaptureAgent):
 
         # Stop moving when not legal
         legal = gameState.getLegalActions(self.index)
+
         if move not in legal:
             move = Directions.STOP
 
@@ -839,6 +860,178 @@ class DQN_agent(CaptureAgent):
         else:
             return currentPath
 
+class OffensiveAgent(ReflexCaptureAgent):
+
+    def __init__(self, index, *args, **kwargs):
+        CaptureAgent.__init__(self, index)
+
+    def registerInitialState(self, gameState):
+        ReflexCaptureAgent.registerInitialState(self, gameState)
+        self.last_food = CaptureAgent.getFood(self, gameState)
+        self.last_capsule = CaptureAgent.getCapsules(self,gameState)
+        self.last_enemies = None
+        self.last_ghosts = None
+        # TODO Add return for food
+
+
+    # ============== HELPER FUNCTIONS ===============
+
+    def isWall(self,gameState,pos:tuple):
+        grid = gameState.data.layout.walls
+        return grid[pos[0]][pos[1]]
+
+    def getCenterPos(self,gameState):
+        width = 34
+        height = 18
+        # ASTAR Path to center
+
+        if gameState.isOnRedTeam(self.index):
+            pos_x = int(width / 2) - 1
+            for i in range(1000):
+                pos_y = random.randint(int(height / 4), int(0.75 * height))
+
+                center = (pos_x,pos_y)
+                if not self.isWall(gameState,center):
+                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                  [center]))  # hard code for now
+            else: #blue
+                pos_x = int(width / 2) + 1
+                for i in range(1000):
+                    pos_y = random.randint(int(height / 4), int(0.75 * height))
+                    center = (pos_x, pos_y)
+                    if not self.isWall(gameState, center):
+                        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                      [center]))  # hard code for now
+
+
+    def path_to_pos(self,gameState,goal_pos:tuple):
+        current_pos = gameState.getAgentPosition(self.index)
+        return deque(self.aStarSearch(current_pos, gameState, [goal_pos]))
+
+
+    def aStarSearch(self, startPosition, gameState, goalPositions, avoidPositions=[], returnPosition=False):
+        """
+    Finds the distance between the agent with the given index and its nearest goalPosition
+    """
+        walls = gameState.getWalls()
+        width = walls.width
+        height = walls.height
+        walls = walls.asList()
+
+        actions = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+        actionVectors = [Actions.directionToVector(action) for action in actions]
+        # Change action vectors to integers so they work correctly with indexing
+        actionVectors = [tuple(int(number) for number in vector) for vector in actionVectors]
+
+        # Values are stored a 3-tuples, (Position, Path, TotalCost)
+
+        currentPosition, currentPath, currentTotal = startPosition, [], 0
+        # Priority queue uses the maze distance between the entered point and its closest goal position to decide which comes first
+        queue = util.PriorityQueueWithFunction(
+            lambda entry: entry[2] + width * height if entry[0] in avoidPositions else 0 + min(
+                util.manhattanDistance(entry[0], endPosition) for endPosition in goalPositions))
+
+        # Keeps track of visited positions
+        visited = {currentPosition}
+
+        while currentPosition not in goalPositions:
+
+            possiblePositions = [((currentPosition[0] + vector[0], currentPosition[1] + vector[1]), action) for
+                                 vector, action in zip(actionVectors, actions)]
+            legalPositions = [(position, action) for position, action in possiblePositions if position not in walls]
+
+            for position, action in legalPositions:
+                if position not in visited:
+                    visited.add(position)
+                    queue.push((position, currentPath + [action], currentTotal + 1))
+
+            # This shouldn't ever happen...But just in case...
+            if len(queue.heap) == 0:
+                return None
+            else:
+                currentPosition, currentPath, currentTotal = queue.pop()
+
+        if returnPosition:
+            return currentPath, currentPosition
+        else:
+            return currentPath
+
+    # ============== CHOOSE ACTION ===============
+
+    """
+      A reflex agent that seeks food. This is an agent
+      we give you to get an idea of what an offensive agent might look like,
+      but it is by no means the best or only way to build an offensive agent.
+      """
+    def getFeatures(self, gameState, action):
+        features = util.Counter()
+        successor = self.getSuccessor(gameState, action)
+        myState = successor.getAgentState(self.index)
+        myPos = myState.getPosition()
+
+
+        # Compute distance to the nearest food
+        foodList = self.getFood(successor).asList()
+        features['foodScore'] = -len(foodList)
+        if len(foodList) > 0:
+            myPos = successor.getAgentState(self.index).getPosition()
+            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            features['distanceToFood'] = minDistance
+
+        # Computes whether we're on offense (1) or defense (0)
+        features['onOffense'] = 0
+        if myState.isPacman: features['onOffense'] = 1
+
+        # Compute distance to the nearest pill
+        pillList = self.getCapsules(successor)
+        if len(pillList) > 0:
+            myPos = successor.getAgentState(self.index).getPosition()
+            minDistance = min([self.getMazeDistance(myPos, pill) for pill in pillList])
+            features['distanceToPill'] = minDistance
+
+        # Computes distance to threats we can see,
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        threats = [a for a in enemies if not a.isPacman and a.scaredTimer == 0 and a.getPosition() != None]
+        if len(threats) > 0:
+            dists = [len(self.aStarSearch(myPos, gameState,[a.getPosition()])) for a in threats]
+            features['threatDistance'] = min(dists)
+
+    # Compute distance to scared ghosts we can see
+        ghosts = [a for a in enemies if not a.isPacman and a.scaredTimer != 0 and a.getPosition() != None]
+        if len(ghosts) > 0:
+            dists = [len(self.aStarSearch(myPos, gameState,[a.getPosition()])) for a in ghosts]
+            features['ghostDistance'] = min(dists)
+
+        if action == Directions.STOP: features['stop'] = 1
+        rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+        if action == rev: features['reverse'] = 0
+
+        # Food consumption
+        carryingFood = myState.numCarrying
+        features['carryingFood'] = carryingFood
+        features['returnedFood'] = myState.numReturned
+
+        #if carryingFood > 5 or len(threats) > 0:
+         #   centerPos = self.getCenterPos(gameState)
+          #  features['closenessToSafety'] = self.aStarSearch(myPos, gameState,[centerPos])
+
+        return features
+
+    def getWeights(self, gameState, action):
+        return {'foodScore': 50, #previous 100
+                'onOffense': 10,
+                'distanceToFood': -1,
+                'distanceToCapsule': -5,
+                'threatDistance': +5,
+                'ghostDistance': -10,
+                'stop': -100,
+                'reverse': -2,
+                'carryingFood': -2, # Becomes worse if too many food is carried
+                'returnedFood': 10,
+                'closenessToSafety': -60
+                }
+
+
 class terminator(ReflexCaptureAgent):
     """
 
@@ -850,6 +1043,9 @@ class terminator(ReflexCaptureAgent):
     4. Maybe stay close to food
 
     """
+    def __init__(self, index, *args, **kwargs):
+        CaptureAgent.__init__(self, index)
+
     # ! 5. What do we do if we're scared
     def registerInitialState(self, gameState):
         ReflexCaptureAgent.registerInitialState(self, gameState)
@@ -895,7 +1091,6 @@ class terminator(ReflexCaptureAgent):
 
         #? See what centerpos is the most open
 
-        pass
     def chooseAction(self, gameState):
         """
         Picks among the actions with the highest Q(s,a).
@@ -1080,3 +1275,4 @@ class terminator(ReflexCaptureAgent):
         #print(action)
         #print(features * weights)
         return features * weights
+
