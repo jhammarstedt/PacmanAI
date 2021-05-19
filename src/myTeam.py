@@ -11,7 +11,6 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-#! FIX GAME OVER
 from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
@@ -386,13 +385,9 @@ class DQN_agent(CaptureAgent):
             reward += A*2  # Eat food
         elif A < 0:
             if B > 0:
-<<<<<<< Updated upstream
                 reward += B*10  # Dropped food
             else:
                 reward -= 100  # Got eaten ==> Explosion
-=======
-                reward += B*2  # Dropped food
->>>>>>> Stashed changes
 
         if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
                 self.atCenter = False
@@ -417,20 +412,6 @@ class DQN_agent(CaptureAgent):
         if reward == 0:
             reward = -1  # Nothing happens, punish time
 
-
-<<<<<<< Updated upstream
-=======
-        else:
-             if self.first_state:  # since we will start in the starting position duh
-                 self.first_state = False
-             else:
-                 if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
-                     self.atCenter = False
-                     self.ASTARPATH = self.getCenterPos(currentGameState)
-                     self.center_counter = 0
-                     return -100  # we were eaten and spawned back to start
-
->>>>>>> Stashed changes
         return reward
 
     def observation_step(self, gameState):
@@ -871,6 +852,7 @@ class OffensiveAgent(ReflexCaptureAgent):
         self.last_capsule = CaptureAgent.getCapsules(self,gameState)
         self.last_enemies = None
         self.last_ghosts = None
+        self.get_back_safe = False
         # TODO Add return for food
 
 
@@ -880,10 +862,16 @@ class OffensiveAgent(ReflexCaptureAgent):
         grid = gameState.data.layout.walls
         return grid[pos[0]][pos[1]]
 
-    def getCenterPos(self,gameState):
+    def getCenterPos(self,gameState,avoid_enemies=True):
         width = 34
         height = 18
         # ASTAR Path to center
+        pos_to_avoid = []
+        if avoid_enemies:
+            enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+            ghost = [a for a in enemies if (not a.isPacman) and (a.scaredTimer<=0) and a.getPosition() != None]
+            if len(ghost)>0:
+                pos_to_avoid = [ghost[0].getPosition()]
 
         if gameState.isOnRedTeam(self.index):
             pos_x = int(width / 2) - 1
@@ -893,7 +881,7 @@ class OffensiveAgent(ReflexCaptureAgent):
                 center = (pos_x,pos_y)
                 if not self.isWall(gameState,center):
                     return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                  [center]))  # hard code for now
+                                                  [center],avoidPositions=pos_to_avoid))  # hard code for now
             else: #blue
                 pos_x = int(width / 2) + 1
                 for i in range(1000):
@@ -901,7 +889,7 @@ class OffensiveAgent(ReflexCaptureAgent):
                     center = (pos_x, pos_y)
                     if not self.isWall(gameState, center):
                         return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                      [center]))  # hard code for now
+                                                      [center],avoidPositions=pos_to_avoid))  # hard code for now
 
 
     def path_to_pos(self,gameState,goal_pos:tuple):
@@ -956,13 +944,7 @@ class OffensiveAgent(ReflexCaptureAgent):
         else:
             return currentPath
 
-    # ============== CHOOSE ACTION ===============
 
-    """
-      A reflex agent that seeks food. This is an agent
-      we give you to get an idea of what an offensive agent might look like,
-      but it is by no means the best or only way to build an offensive agent.
-      """
     def getFeatures(self, gameState, action):
         features = util.Counter()
         successor = self.getSuccessor(gameState, action)
@@ -1011,9 +993,10 @@ class OffensiveAgent(ReflexCaptureAgent):
         features['carryingFood'] = carryingFood
         features['returnedFood'] = myState.numReturned
 
-        #if carryingFood > 5 or len(threats) > 0:
-         #   centerPos = self.getCenterPos(gameState)
-          #  features['closenessToSafety'] = self.aStarSearch(myPos, gameState,[centerPos])
+        if carryingFood > 5 or len(threats) > 0:
+            self.centerPos = self.getCenterPos(gameState)
+            self.get_back_safe = True
+            #features['closenessToSafety'] = len(centerPos)#self.aStarSearch(myPos, gameState,[centerPos])
 
         return features
 
@@ -1030,6 +1013,42 @@ class OffensiveAgent(ReflexCaptureAgent):
                 'returnedFood': 10,
                 'closenessToSafety': -60
                 }
+
+    def chooseAction(self, gameState):
+        """
+        Picks among the actions with the highest Q(s,a).
+        """
+        actions = gameState.getLegalActions(self.index)
+
+        # You can profile your evaluation time by uncommenting these lines
+        # start = time.time()
+        values = [self.evaluate(gameState, a) for a in actions]
+        # print('eval time for agent %d: %.4f' % (self.index, time.time() - start))
+        if self.get_back_safe:
+            if not gameState.getAgentState(self.index).isPacman:
+                self.get_back_safe = False
+            else:
+                move = self.getCenterPos(gameState,avoid_enemies=True)
+                if len(move)>0:
+                    return move.popleft()
+
+        maxValue = max(values)
+        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
+
+        foodLeft = len(self.getFood(gameState).asList())
+
+        if foodLeft <= 2:
+            bestDist = 9999
+            for action in actions:
+                successor = self.getSuccessor(gameState, action)
+                pos2 = successor.getAgentPosition(self.index)
+                dist = self.getMazeDistance(self.start, pos2)
+                if dist < bestDist:
+                    bestAction = action
+                    bestDist = dist
+            return bestAction
+
+        return random.choice(bestActions)
 
 
 class terminator(ReflexCaptureAgent):
