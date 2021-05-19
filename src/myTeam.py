@@ -291,7 +291,7 @@ class DQN_agent(CaptureAgent):
 
         # Save last_action
         self.last_action = self.get_value(move)
-        print(f"{move}  q: {self.Q_pred} ")
+
         return move
 
     def CountOurFood(self, gameState):
@@ -377,15 +377,6 @@ class DQN_agent(CaptureAgent):
                 reward += B  # Dropped food
             else:
                 reward -= 100  # Got eaten ==> Explosion
-                self.ASTARPATH = self.getCenterPos(currentGameState)
-                self.center_counter = 0
-                self.atCenter = False
-
-        if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index): #also got eaten
-            self.atCenter = False
-            self.ASTARPATH = self.getCenterPos(currentGameState)
-            self.center_counter = 0
-            reward -= 100  # we were eaten and spawned back to start
 
         if C < 0:
             reward -= 5  # Our capsule eaten
@@ -511,8 +502,8 @@ class DQN_agent(CaptureAgent):
 
     def chooseAction(self, gameState):
         """
-        This will be our main method from where we get the action!
-        """
+    This will be our main method from where we get the action!
+    """
 
         if not self.atCenter and self.center_counter == len(self.ASTARPATH) - 1:
             self.atCenter = True
