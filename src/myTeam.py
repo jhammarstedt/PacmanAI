@@ -11,7 +11,7 @@
 # Student side autograding was added by Brad Miller, Nick Hay, and
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
-
+#! FIX GAME OVER
 from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
@@ -310,6 +310,15 @@ class DQN_agent(CaptureAgent):
         lastGameState = self.getPreviousObservation()
         currentGameState = self.getCurrentObservation()
 
+        if (currentGameState.isOver()):
+            print('GAME IS OVER')
+            if CaptureAgent.getScore(self, currentGameState) > 0:
+                self.won = True
+            if (self.terminal and self.won):
+                return 10000.  # win is great
+            else:
+                print("LOSS")
+                return -1000  # we lost
         # AgentState objects
         # start = startConfiguration
         # configuration = startConfiguration
@@ -386,22 +395,16 @@ class DQN_agent(CaptureAgent):
         if reward == 0:
             reward = -1  # Nothing happens, punish time
 
-        if (currentGameState.isOver()):
-            if CaptureAgent.getScore(self, currentGameState) > 0:
-                self.won = True
-            if (self.terminal and self.won):
-                return 10000.  # win is great
-            else:
-                return -1000  # we lost
-        else:
-            if self.first_state:  # since we will start in the starting position duh
-                self.first_state = False
-            else:
-                if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
-                    self.atCenter = False
-                    self.ASTARPATH = self.getCenterPos(currentGameState)
-                    self.center_counter = 0
-                    return -100  # we were eaten and spawned back to start
+
+        # else:
+        #     if self.first_state:  # since we will start in the starting position duh
+        #         self.first_state = False
+        #     else:
+        #         if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
+        #             self.atCenter = False
+        #             self.ASTARPATH = self.getCenterPos(currentGameState)
+        #             self.center_counter = 0
+        #             return -100  # we were eaten and spawned back to start
 
         return reward
 
@@ -632,6 +635,7 @@ class DQN_agent(CaptureAgent):
                     cell = 1
             elif who == 'Friend':
                 team = self.getTeam(state)
+                cell =0
                 for agent in team:
                     if agent != self.index:
                         pos = state.getAgentPosition(agent)
@@ -640,7 +644,7 @@ class DQN_agent(CaptureAgent):
 
             elif who == 'Enemy':
                 enemies = self.getOpponents(state)
-
+                cell =0
                 for agent in enemies:
                     # TODO use probabilities if the
                     pos = state.getAgentPosition(agent)
