@@ -291,7 +291,7 @@ class DQN_agent(CaptureAgent):
 
         # Save last_action
         self.last_action = self.get_value(move)
-
+        print(f"{move}  q: {self.Q_pred} ")
         return move
 
     def CountOurFood(self, gameState):
@@ -377,6 +377,15 @@ class DQN_agent(CaptureAgent):
                 reward += B  # Dropped food
             else:
                 reward -= 100  # Got eaten ==> Explosion
+                self.ASTARPATH = self.getCenterPos(currentGameState)
+                self.center_counter = 0
+                self.atCenter = False
+
+        if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index): #also got eaten
+            self.atCenter = False
+            self.ASTARPATH = self.getCenterPos(currentGameState)
+            self.center_counter = 0
+            reward -= 100  # we were eaten and spawned back to start
 
         if C < 0:
             reward -= 5  # Our capsule eaten
@@ -502,8 +511,8 @@ class DQN_agent(CaptureAgent):
 
     def chooseAction(self, gameState):
         """
-    This will be our main method from where we get the action!
-    """
+        This will be our main method from where we get the action!
+        """
 
         if not self.atCenter and self.center_counter == len(self.ASTARPATH) - 1:
             self.atCenter = True
@@ -854,7 +863,7 @@ class terminator(ReflexCaptureAgent):
 
         self.at_capsule = False
         self.path_to_capsule = self.path_to_pos(gameState,self.best_capsule)
-
+        self.path_to_theif = None #path to the secret theif we cant see (yet)
     def path_to_pos(self,gameState,goal_pos:tuple):
         current_pos = gameState.getAgentPosition(self.index)
         return deque(self.aStarSearch(current_pos, gameState, [goal_pos]))
@@ -975,32 +984,33 @@ class terminator(ReflexCaptureAgent):
 
         if action == Directions.STOP: features['stop'] = 1
         rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
-        if action == rev: features['reverse'] = 1
+        if action == rev: features['reverse'] = 0
 
 
         #See where enemies eat food, then get the closest food and go there
         missing_food = self.outsmart_enemies(gameState)
 
         if missing_food is not None:
+            #print('missing food')
             # if len(missing_food) > 1:
             #     pass  # ! here we can see if we ate an enemy or if they have 2 ppl eating at the same time
-            all_paths = [[f,self.aStarSearch(myPos,gameState,[f])]
+            all_paths = [[f,self.aStarSearch(myPos, gameState, [f])]
                              for f in missing_food]
             self.path_to_theif = min(all_paths)[1]
 
+        if self.path_to_theif is not None:
             features['secret_foodtheif'] = len(self.path_to_theif)
 
 
         return features
 
     def getWeights(self, gameState, action):
-        #! why does it behave strange here??
         return {'numInvaders': -1000,
                 'onDefense': 100,
                 'invaderDistance': -10,
                 'stop': -100,
                 'reverse': -2,
-                'secret_foodtheif': -200}
+                'secret_foodtheif': -15}
 
     def aStarSearch(self, startPosition, gameState, goalPositions, avoidPositions=[], returnPosition=False):
         """
@@ -1055,4 +1065,7 @@ class terminator(ReflexCaptureAgent):
         """
         features = self.getFeatures(gameState, action)
         weights = self.getWeights(gameState, action)
+        #print(features, weights)
+        #print(action)
+        #print(features * weights)
         return features * weights
