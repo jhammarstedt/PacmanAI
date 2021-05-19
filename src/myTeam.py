@@ -369,12 +369,18 @@ class DQN_agent(CaptureAgent):
         #E = currentFood.count() - lastFood.count()
         F = currentFoodDefending.count() - lastFoodDefending.count() # Decrease == our food eaten, Increase ==  Our Ghost ate pacman || Dropped food
         G = currentScore - lastScore
+        H = 1 # Being Pacman is rewarded
+
+        if (myCurrentState.isPacman): # It is great to be a pacman
+            reward += H
+        else:
+            reward -= H
 
         if A > 0:
             reward += A  # Eat food
         elif A < 0:
             if B > 0:
-                reward += B  # Dropped food
+                reward += B*2  # Dropped food
             else:
                 reward -= 100  # Got eaten ==> Explosion
 
@@ -384,9 +390,9 @@ class DQN_agent(CaptureAgent):
         if D < 0:
             reward += 5  # Eat capsule
 
-        if F < 0:
-            reward -= F  # Our food eaten
-        elif F > 0:
+        # if F < 0:
+        #    reward -= F  # Our food eaten
+        if F > 0:
             if B == 0:
                 reward += 20  # Eat enemy pacman. Not completely correct, becuase other team member might have dropped food
 
