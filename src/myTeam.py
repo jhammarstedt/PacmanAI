@@ -304,13 +304,13 @@ class DQN_agent(CaptureAgent):
         count = foodgrid.count()
         return count
 
-    def updateLastReward(self,state):
+    def updateLastReward(self,currentGameState):
 
         # GameState objects
-        lastGameState = self.getPreviousObservation()
-        currentGameState = self.getCurrentObservation()
+        lastGameState = self.getCurrentObservation()
+        #currentGameState = self.getCurrentObservation()
 
-        if (state.isOver()):
+        if (currentGameState.isOver()):
             print('GAME IS OVER')
             if CaptureAgent.getScore(self, currentGameState) > 0:
                 self.won = True
