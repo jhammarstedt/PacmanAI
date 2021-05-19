@@ -859,6 +859,9 @@ class terminator(ReflexCaptureAgent):
         self.at_capsule = False
         self.path_to_capsule = self.path_to_pos(gameState,self.best_capsule)
         self.path_to_theif = None #path to the secret theif we cant see (yet)
+        self.theif_pos = None
+        self.spot_enemies = False # can we see enemies?
+
     def path_to_pos(self,gameState,goal_pos:tuple):
         current_pos = gameState.getAgentPosition(self.index)
         return deque(self.aStarSearch(current_pos, gameState, [goal_pos]))
@@ -906,28 +909,33 @@ class terminator(ReflexCaptureAgent):
 
 
         actions = gameState.getLegalActions(self.index)
-        #self.predict_enemies(gameState)
-        # You can profile your evaluation time by uncommenting these lines
-        # start = time.time()
+
         values = [self.evaluate(gameState, a) for a in actions]
-        # print('eval time for agent %d: %.4f' % (self.index, time.time() - start))
 
         maxValue = max(values)
-        #print([a for a, v in zip(actions, values)])
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
 
         foodLeft = len(self.getFood(gameState).asList())
 
-        if foodLeft <= 2:
-            bestDist = 9999
-            for action in actions:
-                successor = self.getSuccessor(gameState, action)
-                pos2 = successor.getAgentPosition(self.index)
-                dist = self.getMazeDistance(self.start, pos2)
-                if dist < bestDist:
-                    bestAction = action
-                    bestDist = dist
-            return bestAction
+        if not self.spot_enemies and self.path_to_theif is not None:
+            action = self.path_to_pos(gameState, self.theif_pos).popleft() # get the
+            return action
+        else:
+            capsule_action = self.path_to_pos(gameState, self.best_capsule)
+            if len(capsule_action) > 0:
+                return capsule_action.popleft()
+            return 'Stop'
+
+        # if foodLeft <= 2:
+        #     bestDist = 9999
+        #     for action in actions:
+        #         successor = self.getSuccessor(gameState, action)
+        #         pos2 = successor.getAgentPosition(self.index)
+        #         dist = self.getMazeDistance(self.start, pos2)
+        #         if dist < bestDist:
+        #             bestAction = action
+        #             bestDist = dist
+        #     return bestAction
 
         return random.choice(bestActions)
 
@@ -974,9 +982,11 @@ class terminator(ReflexCaptureAgent):
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
         features['numInvaders'] = len(invaders)
         if len(invaders) > 0:
+            self.spot_enemies = True
             dists = [len(self.aStarSearch(myPos, gameState,[a.getPosition()])) for a in invaders]
             features['invaderDistance'] = min(dists)
-
+        else:
+            self.spot_enemies = False
         if action == Directions.STOP: features['stop'] = 1
         rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
         if action == rev: features['reverse'] = 0
@@ -986,12 +996,10 @@ class terminator(ReflexCaptureAgent):
         missing_food = self.outsmart_enemies(gameState)
 
         if missing_food is not None:
-            #print('missing food')
-            # if len(missing_food) > 1:
-            #     pass  # ! here we can see if we ate an enemy or if they have 2 ppl eating at the same time
-            all_paths = [[f,self.aStarSearch(myPos, gameState, [f])]
+            all_paths = [[f, self.aStarSearch(myPos, gameState, [f])]
                              for f in missing_food]
-            self.path_to_theif = min(all_paths)[1]
+            self.path_to_theif = deque(min(all_paths)[1])
+            self.theif_pos = self.path_to_theif[0]
 
         if self.path_to_theif is not None:
             features['secret_foodtheif'] = len(self.path_to_theif)
