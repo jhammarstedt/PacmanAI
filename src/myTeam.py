@@ -227,14 +227,14 @@ class DQN_agent(CaptureAgent):
               if not self.isWall(gameState,center):
                   return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
                                                 [center]))  # hard code for now
-            else: #blue
-                pos_x = int(width / 2) + 1
-                for i in range(1000):
-                    pos_y = random.randint(int(height / 4), int(0.75 * height))
-                    center = (pos_x, pos_y)
-                    if not self.isWall(gameState, center):
-                        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                      [center]))  # hard code for now
+        else: #blue
+            pos_x = int(width / 2) + 1
+            for i in range(1000):
+                pos_y = random.randint(int(height / 4), int(0.75 * height))
+                center = (pos_x, pos_y)
+                if not self.isWall(gameState, center):
+                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                  [center]))  # hard code for now
 
         #center_red = [(16, 10), (16, 7)]
         #center_blue = [(17, 7), (17, 10)] #! needs to be fixed
@@ -276,6 +276,7 @@ class DQN_agent(CaptureAgent):
                            self.qnet.terminals: np.zeros(1),
                            self.qnet.rewards: np.zeros(1)})[0]
 
+
             self.Q_global.append(max(self.Q_pred))
             a_winner = np.argwhere(self.Q_pred == np.amax(self.Q_pred))
 
@@ -312,13 +313,17 @@ class DQN_agent(CaptureAgent):
 
         if (currentGameState.isOver()):
             print('GAME IS OVER')
-            if CaptureAgent.getScore(self, currentGameState) > 0:
+            final_score = CaptureAgent.getScore(self, currentGameState)
+            if final_score >0:
                 self.won = True
             if (self.terminal and self.won):
                 return 10000.  # win is great
+            elif final_score ==0:
+                return - 500
             else:
-                print("LOSS")
                 return -1000  # we lost
+
+
         # AgentState objects
         # start = startConfiguration
         # configuration = startConfiguration
@@ -371,7 +376,7 @@ class DQN_agent(CaptureAgent):
         G = currentScore - lastScore
 
         if self.isPacman(currentGameState,self.index):
-            reward +=1
+            reward +=1 #get some points for going into enemy territory
 
         if A > 0:
             reward += A*2  # Eat food
