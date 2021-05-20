@@ -50,7 +50,7 @@ params = {
     'save_interval': 100000,  # original 100000
 
     # Training parameters
-    'TRAIN': True,
+    'TRAIN': False,
     'train_start': 5000,  # Episodes before training starts | orgiginal 5000
     'batch_size': 32,  # Replay memory batch size | original 32
     'mem_size': 100000,  # Replay memory size
@@ -84,7 +84,7 @@ def createTeam(firstIndex, secondIndex, isRed,
   index numbers.  isRed is True if the red team is being created, and
   will be False if the blue team is being created.
   As a potentially helpful development aid, this function can take
-  additional string-valued keyword arguments ("first" and "second" are
+  addtional string-valued keyword arguments ("first" and "second" are
   such arguments in the case of this function), which will come from
   the --redOpts and --blueOpts command-line arguments to capture.py.
   For the nightly contest, however, your team will be created without
