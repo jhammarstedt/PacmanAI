@@ -31,7 +31,7 @@ from DQN import *
 from game import Actions
 from baselineTeam import ReflexCaptureAgent,DefensiveReflexAgent
 
-load_model = False
+load_model = True
 if load_model:
     with open("saves/checkpoint") as f:
         data = f.readline()
@@ -47,7 +47,7 @@ params = {
     # Model backups
     'load_file': load,
     'save_file': "v1",
-    'save_interval': 55000,  # original 100000
+    'save_interval': 100000,  # original 100000
 
     # Training parameters
     'TRAIN': True,
@@ -60,14 +60,14 @@ params = {
 
     # Epsilon value (epsilon-greedy)
     'eps': 0.3,  # Epsilon start value
-    'eps_final': 0.3,  # Epsilon end value
-    'eps_step': 100000,  # Epsilon steps between start and end (linear)
+    'eps_final': 0.1,  # Epsilon end value
+    'eps_step': 1000000,  # Epsilon steps between start and end (linear)
 
     # State matrices
     'STATE_MATRICES': 14,
 
     # Enable GPU
-    'GPU': False
+    'GPU': True
 
 }
 
@@ -77,7 +77,7 @@ params = {
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='terminator', second='OffensiveAgent', **kwargs):
+               first='terminator', second='DQN_agent', **kwargs):
     """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -386,8 +386,8 @@ class DQN_agent(CaptureAgent):
         elif A < 0:
             if B > 0:
                 reward += B*10  # Dropped food
-            else:
-                reward -= 100  # Got eaten ==> Explosion
+            # else:
+            #     reward -= 100  # Got eaten ==> Explosion
 
         if currentGameState.getAgentPosition(self.index) == currentGameState.getInitialAgentPosition(self.index):
                 self.atCenter = False
@@ -1052,6 +1052,7 @@ class OffensiveAgent(ReflexCaptureAgent):
                 move = self.getCenterPos(gameState,avoid_enemies=True)
                 if len(move)>0:
                     return move.popleft()
+
 
         maxValue = max(values)
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
