@@ -24,7 +24,7 @@ Credits to cshelton for rewriting the enviroment to support python 3, you can fi
  * RL in pytorch: [Mario](https://pytorch.org/tutorials/intermediate/mario_rl_tutorial.html), [Flappy Bird](https://www.toptal.com/deep-learning/pytorch-reinforcement-learning-tutorial)
  * [Keras RL](https://github.com/keras-rl/keras-rl)
  * [MARL on github](https://github.com/topics/multiagent-reinforcement-learning)
- * [Pacman DQL](https://esc.fnwi.uva.nl/thesis/centraal/files/f323981448.pdf)
+ * [Pacman DQL](https://esc.fnwi.uva.nl/thesis/centraal/files/f323981448.pdf), [repo](https://github.com/tychovdo/PacmanDQN)
 
 ## Run
 Use the following command to run the code
