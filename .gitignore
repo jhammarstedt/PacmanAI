@@ -8,7 +8,7 @@ __pycache__/
 *.so
 
 #other groups
-src/Groups/
+src/Groups/*
 
 #saved models and score
 src/saves/
