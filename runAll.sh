@@ -1,6 +1,7 @@
 #!/bin/bash
 #pip install requrements.txt
 cd src/
+mkdir logs
 END=6
 
 echo "Playing against baseline team"
