@@ -1,5 +1,6 @@
 from myTeam import *
 from baselineTeam import ReflexCaptureAgent
+
 class OffensiveAgent(ReflexCaptureAgent):
 
     def __init__(self, index, *args, **kwargs):
@@ -50,21 +51,47 @@ class OffensiveAgent(ReflexCaptureAgent):
 
         if gameState.isOnRedTeam(self.index):
             pos_x = int(width / 2) - adjust_x
-            for i in range(1000):
-                pos_y = random.randint(int(height * low), int(high * height))
+            best_path_len = 99999
+            best_path = []
 
-                center = (pos_x,pos_y)
+            for i in range(1,height):
+                center = (pos_x,i)
                 if not self.isWall(gameState,center):
-                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                  [center],avoidPositions=pos_to_avoid))  # hard code for now
+                    path = self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                            [center],avoidPositions=pos_to_avoid)
+                    if len(path) < best_path_len:
+                        best_path = path
+                        best_path_len = len(path)
+
+            return deque(best_path)
+
+            #for i in range(1000):
+            #    pos_y = random.randint(int(height * low), int(high * height))
+            #    center = (pos_x,pos_y)
+
+            #    if not self.isWall(gameState,center):
+            #        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+            #                                      [center],avoidPositions=pos_to_avoid))  # hard code for now
         else: #blue
             pos_x = int(width / 2) + adjust_x
-            for i in range(1000):
-                pos_y = random.randint(int(height * low), int(high * height))
-                center = (pos_x, pos_y)
-                if not self.isWall(gameState, center):
-                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                  [center],avoidPositions=pos_to_avoid))  # hard code for now
+
+            for i in range(1,height):
+                center = (pos_x,i)
+                if not self.isWall(gameState,center):
+                    path = self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                            [center],avoidPositions=pos_to_avoid)
+                    if len(path) < best_path_len:
+                        best_path = path
+                        best_path_len = len(path)
+
+            return deque(best_path)
+
+            #for i in range(1000):
+            #    pos_y = random.randint(int(height * low), int(high * height))
+            #    center = (pos_x, pos_y)
+            #    if not self.isWall(gameState, center):
+            #        return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+            #                                      [center],avoidPositions=pos_to_avoid))  # hard code for now
 
 
     def path_to_pos(self,gameState,goal_pos:tuple):
