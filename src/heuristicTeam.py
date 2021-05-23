@@ -1,5 +1,6 @@
 from myTeam import *
 from baselineTeam import ReflexCaptureAgent
+import numpy as np
 class OffensiveAgent(ReflexCaptureAgent):
 
     def __init__(self, index, *args, **kwargs):
@@ -257,6 +258,8 @@ class terminator(ReflexCaptureAgent):
         self.theif_pos = None
         self.spot_enemies = False # can we see enemies?
 
+        #self.get_best_position(gameState)
+
     def path_to_pos(self,gameState,goal_pos:tuple):
         current_pos = gameState.getAgentPosition(self.index)
         return deque(self.aStarSearch(current_pos, gameState, [goal_pos]))
@@ -350,7 +353,31 @@ class terminator(ReflexCaptureAgent):
         self.last_food = ourfood # update last food state
         return eaten
 
+    def get_best_position(self,gameState):
+        """function to find the most open position on our side, that will give us the best cover of the other positions"""
+        width, height = gameState.data.layout.width, gameState.data.layout.height
+        grid = gameState.getWalls().data
+        # Get the relevant part of the grid
+        x_dir, y_dir = 10, 18
 
+        if gameState.isOnRedTeam(self.index):
+            relevant_grid = grid[9:16]
+        else:
+            relevant_grid= grid[17:24]
+
+        full_grid = []
+
+        #testx,testy = 0,0
+        #best = [len([self.aStarSearch((testx,testy),gameState,[(x,y)]) for x in range(9,17) for y in range(18)]) for testx in range(9,17) for testy in range(18)]
+        #best= [[self.aStarSearch((xpos,ypos),gameState,[(x_test,y_test)]) for x_test in ]]
+        # Get a centerpoint of that section,
+        # compute A* from all other parts to this section
+        # Return the one that on averge has the shortest path to the others
+
+
+
+
+        pass
     def get_our_center(self, gameState):
         width, height = gameState.data.layout.width, gameState.data.layout.height
         if gameState.isOnRedTeam(self.index):
