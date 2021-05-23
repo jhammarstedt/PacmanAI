@@ -1,27 +1,5 @@
 from myTeam import *
-from baselineTeam import ReflexCaptureAgent,DefensiveReflexAgent
-
-def createTeam(firstIndex, secondIndex, isRed,
-               first='terminator', second='OffensiveAgent', **kwargs):
-    """
-  This function should return a list of two agents that will form the
-  team, initialized using firstIndex and secondIndex as their agent
-  index numbers.  isRed is True if the red team is being created, and
-  will be False if the blue team is being created.
-  As a potentially helpful development aid, this function can take
-  additional string-valued keyword arguments ("first" and "second" are
-  such arguments in the case of this function), which will come from
-  the --redOpts and --blueOpts command-line arguments to capture.py.
-  For the nightly contest, however, your team will be created without
-  any extra arguments, so you should make sure that the default
-  behavior is what you want for the nightly contest.
-  """
-    # return [eval(DQN_agent),eval(DQN_agent))]  # maybe like this
-    print(f"PLayer 1: {first} red")
-    print(f"Player 2: {second} orange")
-    # The following line is an example only; feel free to change it.
-    return [eval(first)(firstIndex, **kwargs), eval(second)(secondIndex, **kwargs)]
-
+from baselineTeam import ReflexCaptureAgent
 class OffensiveAgent(ReflexCaptureAgent):
 
     def __init__(self, index, *args, **kwargs):
@@ -62,12 +40,7 @@ class OffensiveAgent(ReflexCaptureAgent):
 
             #if gameState.AgentState.getPosition(self.index)
 
-        # Get the closest capsule and see if that route is better
-        capsules = CaptureAgent.getCapsules(self, gameState)
-
-
-
-
+        # ASTAR Path to center
         pos_to_avoid = []
         if avoid_enemies:
             enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
@@ -75,46 +48,23 @@ class OffensiveAgent(ReflexCaptureAgent):
             if len(ghost)>0:
                 pos_to_avoid = [ghost[0].getPosition()]
 
-        # ASTAR Path to center
-        closest_capsule = deque(min([self.aStarSearch(gameState.getAgentPosition(self.index), gameState, [cap]) for cap in capsules]))
-
-
         if gameState.isOnRedTeam(self.index):
-
-
             pos_x = int(width / 2) - adjust_x
+            for i in range(1000):
+                pos_y = random.randint(int(height * low), int(high * height))
 
-            pos_y = [i for i in range(1,height-1)]
-
-            best_path_to_freedom = deque(min([self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                           [(pos_x,i)], avoidPositions=pos_to_avoid) for i in pos_y if not self.isWall(gameState,(pos_x,i))]))
-            return best_path_to_freedom
-            # for i in range(1000):
-            #     pos_y = random.randint(int(height * low), int(high * height))
-            #
-            #     center = (pos_x,pos_y)
-            #     if not self.isWall(gameState,center):
-            #         path_to_center = deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-            #                                [center], avoidPositions=pos_to_avoid))  # hard code for now
-            #         if len(path_to_center)<len(closest_capsule):
-            #             print("Closer to center")
-            #         else:
-            #             print("Closer to capsule")
-            #         return min(path_to_center, closest_capsule)
+                center = (pos_x,pos_y)
+                if not self.isWall(gameState,center):
+                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                  [center],avoidPositions=pos_to_avoid))  # hard code for now
         else: #blue
             pos_x = int(width / 2) + adjust_x
             for i in range(1000):
                 pos_y = random.randint(int(height * low), int(high * height))
                 center = (pos_x, pos_y)
                 if not self.isWall(gameState, center):
-                    path_to_center = deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
-                                                            [center], avoidPositions=pos_to_avoid))  # hard code for now
-
-
-                    return min(path_to_center, closest_capsule)
-
-
-
+                    return deque(self.aStarSearch(gameState.getAgentPosition(self.index), gameState,
+                                                  [center],avoidPositions=pos_to_avoid))  # hard code for now
 
 
     def path_to_pos(self,gameState,goal_pos:tuple):
@@ -248,20 +198,19 @@ class OffensiveAgent(ReflexCaptureAgent):
         values = [self.evaluate(gameState, a) for a in actions]
 
         if self.get_back_safe:
-            # if not gameState.getAgentState(self.index).isPacman:
-            #     if len([gameState.getAgentState(i).getPosition()
-            #         for i in CaptureAgent.getOpponents(self,gameState) if gameState.getAgentState(i).getPosition() is not None])>0: #any opponents nearby?
-            #
-            #         move = self.getCenterPos(gameState, run_away= True)
-            #         if len(move) > 0:
-            #             return move.popleft()
-            #
-            #     self.get_back_safe = False
-            # else:
-                move = self.getCenterPos(gameState, avoid_enemies=True)
+            if not gameState.getAgentState(self.index).isPacman:
+                if len([gameState.getAgentState(i).getPosition()
+                    for i in CaptureAgent.getOpponents(self,gameState) if gameState.getAgentState(i).getPosition() is not None])>0: #any opponents nearby?
+
+                    move = self.getCenterPos(gameState,run_away= True)
+                    if len(move) > 0:
+                        return move.popleft()
+
+                self.get_back_safe = False
+            else:
+                move = self.getCenterPos(gameState,avoid_enemies=True)
                 if len(move)>0:
                     return move.popleft()
-
 
         maxValue = max(values)
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
@@ -291,10 +240,6 @@ class terminator(ReflexCaptureAgent):
 
     3. interupt this action as soon as we see an enemy
     4. Maybe stay close to food
-
-
-
-    IDEA, when we aren't chasing enemy, we compute the best position that is the closest A* distance to all the first X columns in the grid
 
     """
     def __init__(self, index, *args, **kwargs):
@@ -369,12 +314,16 @@ class terminator(ReflexCaptureAgent):
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
 
-        if not len(invaders) >0 and self.theif_pos is not None:
+        if not len(invaders)>0 and self.theif_pos is not None:
             move_to_theif = self.path_to_pos(gameState, self.theif_pos)
             if len(move_to_theif)>0:
                 return move_to_theif.popleft()
             else:
                 return 'Stop'
+        # else:
+        #     capsule_action = self.path_to_pos(gameState, self.best_capsule)
+        #     if len(capsule_action) > 0:
+        #         return capsule_action.popleft()
 
 
         if foodLeft <= 2:
@@ -387,6 +336,7 @@ class terminator(ReflexCaptureAgent):
                     bestAction = action
                     bestDist = dist
             return bestAction
+
         return random.choice(bestActions)
 
     def outsmart_enemies(self,gameState)->list:

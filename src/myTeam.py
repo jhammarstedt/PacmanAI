@@ -77,7 +77,7 @@ params = {
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='terminator', second='DQN_agent', **kwargs):
+               first='terminator', second='OffensiveAgent', **kwargs):
     """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
