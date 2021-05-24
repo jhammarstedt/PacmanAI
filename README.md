@@ -9,7 +9,13 @@
 
 ## Task
 To build a team to play CTF- Pacman, created by the competition hosted at [Berkley](http://ai.berkeley.edu/contest.html). This was built as a school assignment for the class [DD2438](https://www.kth.se/student/kurser/kurs/DD2438?l=en) at KTH with an inter-class tournament, which we ended up winning.
-![](http://ai.berkeley.edu/projects/release/contest/v1/002/capture_the_flag.png)
+<p align="center">
+<figure>
+  <img src="http://ai.berkeley.edu/projects/release/contest/v1/002/capture_the_flag.png" alt="CTFpac" width="500" height="250" >
+</figure>
+</p>
+
+
 ### Initial idea
 Our orignal idea was to train a DQL agent to play capture the flag pacman using CNN + fully connected layers. However, the setup for the agent is there, but due to the short deadline we didn't have time to train it sufficiently and as a result very little learning was done.
 
