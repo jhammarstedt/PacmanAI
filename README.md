@@ -14,7 +14,7 @@ To build a team to play CTF- Pacman, created by the competition hosted at [Berkl
 Our orignal idea was to train a DQL agent to play capture the flag pacman using CNN + fully connected layers. However, the setup for the agent is there, but due to the short deadline we didn't have time to train it sufficiently and as a result very little learning was done.
 
 ### Final team
-As a backup to the DQN agent we also added a heuristic based team, that ended up performing really well and won the final tournament.
+As a backup to the DQL agent we also added a heuristic based team, that ended up performing really well and won the final tournament.
 Setup:
 * Defensive Agent:
   * Uses A* to get all paths
